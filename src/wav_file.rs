@@ -128,6 +128,58 @@ impl WavFile {
             samples: Some(Vec::new()),
         })
     }
+
+    /// Returns the number of interleaved audio channels.
+    pub fn number_of_channels(&self) -> u16 {
+        self.format_chunk.number_of_channels
+    }
+
+    /// Returns the sample rate in Hz.
+    pub fn sample_rate(&self) -> u32 {
+        self.format_chunk.sample_rate
+    }
+
+    /// Returns the PCM bit depth used when saving the file.
+    pub fn bits_per_sample(&self) -> u16 {
+        self.format_chunk.bits_per_sample
+    }
+
+    /// Returns the total number of interleaved samples in the file.
+    pub fn number_of_samples(&self) -> usize {
+        self.number_of_samples
+    }
+
+    /// Returns the loaded interleaved samples.
+    pub fn samples(&self) -> Result<&[f64], WavError> {
+        self.samples.as_deref().ok_or(WavError::SamplesNotLoaded)
+    }
+
+    /// Returns the loaded interleaved samples for in-place processing.
+    ///
+    /// The slice has a fixed length, so callers cannot accidentally leave a
+    /// partial multichannel sample frame or make the stored sample count stale.
+    pub fn samples_mut(&mut self) -> Result<&mut [f64], WavError> {
+        self.samples
+            .as_deref_mut()
+            .ok_or(WavError::SamplesNotLoaded)
+    }
+
+    /// Replaces the loaded interleaved samples.
+    pub fn set_samples(&mut self, samples: Vec<f64>) -> Result<(), WavError> {
+        if !samples
+            .len()
+            .is_multiple_of(usize::from(self.number_of_channels()))
+        {
+            return Err(WavError::IncompleteSampleFrame {
+                sample_count: samples.len(),
+                number_of_channels: self.number_of_channels(),
+            });
+        }
+
+        self.number_of_samples = samples.len();
+        self.samples = Some(samples);
+        Ok(())
+    }
 }
 
 fn pcm_layout(

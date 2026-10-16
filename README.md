@@ -40,6 +40,19 @@ command is:
 wavlab-rs metadata input.wav
 ```
 
+Audio can be normalized or amplified with the processing commands:
+
+```console
+wavlab-rs normalize input.wav [output.wav]
+wavlab-rs normalize-db input.wav <target-db> [output.wav]
+wavlab-rs gain input.wav <linear-gain> [output.wav]
+wavlab-rs gain-db input.wav <gain-db> [output.wav]
+```
+
+When the output path is omitted, the input file is updated in place. Gain is
+not clamped while processing, so amplification can cause clipping when the
+result is saved as integer PCM.
+
 ## Creating an empty WAV file
 
 `WavFile::new` accepts the number of channels, sample rate, and bits per
@@ -118,7 +131,6 @@ settings, incomplete multichannel sample frames, and WAV size limits.
 
 - Only integer PCM format WAV files are supported.
 - Only mono and stereo files are supported.
-- Sample access and mutation methods are not public yet.
 - Unknown chunks are skipped while reading and are not reproduced when saving.
 - A saved file is intended to be semantically equivalent, not byte-for-byte
   identical to its input.
