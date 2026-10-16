@@ -24,6 +24,22 @@ wavlab-rs = { path = "../wavlab-rs" }
 use wavlab_rs::{WavError, WavFile};
 ```
 
+## Command-line interface
+
+The package also includes a thin command-line interface. To inspect a WAV
+file's metadata without loading its sample data, run:
+
+```console
+cargo run -- metadata input.wav
+```
+
+After installing the executable with `cargo install --path .`, the equivalent
+command is:
+
+```console
+wavlab-rs metadata input.wav
+```
+
 ## Creating an empty WAV file
 
 `WavFile::new` accepts the number of channels, sample rate, and bits per
