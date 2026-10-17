@@ -687,7 +687,7 @@ mod tests {
     fn public_save_and_open_methods_round_trip_a_file() {
         let sequence = NEXT_TEMP_FILE.fetch_add(1, Ordering::Relaxed);
         let path =
-            std::env::temp_dir().join(format!("wavlab-rs-{}-{sequence}.wav", std::process::id()));
+            std::env::temp_dir().join(format!("wavlab-{}-{sequence}.wav", std::process::id()));
 
         let mut wav_file = WavFile::new(1, 44_100, 24).unwrap();
         wav_file.samples = Some(vec![-1.0, 0.0, 1.0]);

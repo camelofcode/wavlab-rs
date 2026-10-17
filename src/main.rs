@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use wavlab_rs::{WavError, WavFile};
+use wavlab::{WavError, WavFile};
 
 #[derive(Debug, Parser)]
 #[command(version, about = "Inspect and process PCM WAV files")]
@@ -133,7 +133,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use clap::{CommandFactory, Parser};
-    use wavlab_rs::WavFile;
+    use wavlab::WavFile;
 
     use super::{Cli, Command, run};
 
@@ -148,10 +148,8 @@ mod tests {
 
         fn path(&mut self, name: &str) -> PathBuf {
             let id = NEXT_TEST_FILE.fetch_add(1, Ordering::Relaxed);
-            let path = std::env::temp_dir().join(format!(
-                "wavlab-rs-cli-{}-{id}-{name}.wav",
-                std::process::id()
-            ));
+            let path = std::env::temp_dir()
+                .join(format!("wavlab-cli-{}-{id}-{name}.wav", std::process::id()));
             self.0.push(path.clone());
             path
         }
@@ -192,7 +190,7 @@ mod tests {
 
     #[test]
     fn parses_metadata_command() {
-        let cli = Cli::try_parse_from(["wavlab-rs", "metadata", "example.wav"])
+        let cli = Cli::try_parse_from(["wavlab", "metadata", "example.wav"])
             .expect("valid metadata command");
 
         assert!(matches!(
@@ -203,7 +201,7 @@ mod tests {
 
     #[test]
     fn parses_processing_commands() {
-        let normalize = Cli::try_parse_from(["wavlab-rs", "normalize", "in.wav"])
+        let normalize = Cli::try_parse_from(["wavlab", "normalize", "in.wav"])
             .expect("valid normalize command");
         assert!(matches!(
             normalize.command,
@@ -211,7 +209,7 @@ mod tests {
         ));
 
         let normalize_db =
-            Cli::try_parse_from(["wavlab-rs", "normalize-db", "in.wav", "-6.0", "out.wav"])
+            Cli::try_parse_from(["wavlab", "normalize-db", "in.wav", "-6.0", "out.wav"])
                 .expect("valid normalize-db command");
         assert!(matches!(
             normalize_db.command,
@@ -221,7 +219,7 @@ mod tests {
                     && output == Path::new("out.wav")
         ));
 
-        let gain = Cli::try_parse_from(["wavlab-rs", "gain", "in.wav", "2", "out.wav"])
+        let gain = Cli::try_parse_from(["wavlab", "gain", "in.wav", "2", "out.wav"])
             .expect("valid gain command");
         assert!(matches!(
             gain.command,
@@ -231,7 +229,7 @@ mod tests {
                     && output == Path::new("out.wav")
         ));
 
-        let gain_db = Cli::try_parse_from(["wavlab-rs", "gain-db", "in.wav", "-3"])
+        let gain_db = Cli::try_parse_from(["wavlab", "gain-db", "in.wav", "-3"])
             .expect("valid gain-db command");
         assert!(matches!(
             gain_db.command,

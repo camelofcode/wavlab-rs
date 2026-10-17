@@ -1,6 +1,6 @@
-# wavlab-rs
+# wavlab
 
-`wavlab-rs` is an early Rust port of WavLab for reading, inspecting, creating,
+`wavlab` is an early Rust port of WavLab for reading, inspecting, creating,
 and saving PCM WAV files.
 
 The crate currently supports:
@@ -13,15 +13,13 @@ The crate currently supports:
 
 ## Adding the library
 
-The package name uses a hyphen, while Rust code imports it with an underscore:
-
 ```toml
 [dependencies]
-wavlab-rs = { path = "../wavlab-rs" }
+wavlab = { path = "../wavlab-rs" }
 ```
 
 ```rust
-use wavlab_rs::{WavError, WavFile};
+use wavlab::{WavError, WavFile};
 ```
 
 ## Command-line interface
@@ -37,16 +35,16 @@ After installing the executable with `cargo install --path .`, the equivalent
 command is:
 
 ```console
-wavlab-rs metadata input.wav
+wavlab metadata input.wav
 ```
 
 Audio can be normalized or amplified with the processing commands:
 
 ```console
-wavlab-rs normalize input.wav [output.wav]
-wavlab-rs normalize-db input.wav <target-db> [output.wav]
-wavlab-rs gain input.wav <linear-gain> [output.wav]
-wavlab-rs gain-db input.wav <gain-db> [output.wav]
+wavlab normalize input.wav [output.wav]
+wavlab normalize-db input.wav <target-db> [output.wav]
+wavlab gain input.wav <linear-gain> [output.wav]
+wavlab gain-db input.wav <gain-db> [output.wav]
 ```
 
 When the output path is omitted, the input file is updated in place. Gain is
@@ -59,7 +57,7 @@ result is saved as integer PCM.
 sample. It returns an error if the settings are unsupported.
 
 ```rust
-use wavlab_rs::{WavError, WavFile};
+use wavlab::{WavError, WavFile};
 
 fn main() -> Result<(), WavError> {
     let wav_file = WavFile::new(2, 48_000, 24)?;
@@ -76,7 +74,7 @@ The supported channel counts are `1` and `2`. The supported bit depths are
 `WavFile::open` reads the file metadata and loads all sample data:
 
 ```rust
-use wavlab_rs::{WavError, WavFile};
+use wavlab::{WavError, WavFile};
 
 fn main() -> Result<(), WavError> {
     let wav_file = WavFile::open("input.wav")?;
@@ -91,7 +89,7 @@ fn main() -> Result<(), WavError> {
 data. This is useful when inspecting large files:
 
 ```rust
-use wavlab_rs::{WavError, WavFile};
+use wavlab::{WavError, WavFile};
 
 fn main() -> Result<(), WavError> {
     let wav_file = WavFile::open_metadata("input.wav")?;
@@ -109,7 +107,7 @@ Files opened with `WavFile::open`, and files created with `WavFile::new`, can
 be written with `save`:
 
 ```rust
-use wavlab_rs::{WavError, WavFile};
+use wavlab::{WavError, WavFile};
 
 fn main() -> Result<(), WavError> {
     let wav_file = WavFile::open("input.wav")?;
