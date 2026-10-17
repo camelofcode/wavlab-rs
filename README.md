@@ -36,7 +36,11 @@ command is:
 
 ```console
 wavlab metadata input.wav
+wavlab metadata --full input.wav
 ```
+
+By default, `metadata` reads only the WAV structure. The `--full`/`-f` flag
+also loads and scans the samples, adding peak and RMS levels in dBFS.
 
 Audio can be normalized or amplified with the processing commands:
 
@@ -48,11 +52,31 @@ wavlab gain-db input.wav <gain-db> [output.wav]
 wavlab reverse input.wav [output.wav]
 wavlab flip-phase input.wav [output.wav]
 wavlab swap-channels input.wav [output.wav]
+wavlab split-stereo input.wav [left.wav right.wav]
+wavlab split-mid-side input.wav [mid.wav side.wav]
+wavlab split input.wav <milliseconds>...
+wavlab left-right-to-stereo left.wav right.wav output.wav
+wavlab mid-side-to-stereo mid.wav side.wav output.wav
+wavlab mix output.wav <input.wav>...
+wavlab join output.wav <input.wav>...
 ```
 
-When the output path is omitted, the input file is updated in place. Gain is
-not clamped while processing, so amplification can cause clipping when the
-result is saved as integer PCM.
+For the single-output processing commands, omitting the output path updates
+the input file in place. Gain is not clamped while processing, so amplification
+can cause clipping when the result is saved as integer PCM.
+
+When both `split-stereo` output paths are omitted, they default to the input
+name with `_l` and `_r` suffixes. For example, `audio.wav` produces
+`audio_l.wav` and `audio_r.wav` in the same directory.
+
+Likewise, omitted `split-mid-side` paths default to `_mid` and `_side`
+suffixes. The `split` command writes numbered outputs such as `audio_1.wav`,
+`audio_2.wav`, and `audio_3.wav`.
+
+The `mix` and `join` commands require at least two inputs with matching sample
+rates. Mixing starts every input at the first frame, promotes mono to stereo
+when needed, pads shorter inputs with silence, and normalizes the result.
+Joining requires a common channel count and concatenates the inputs in order.
 
 ## Creating an empty WAV file
 

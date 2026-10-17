@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
@@ -17,6 +17,10 @@ enum Command {
     Metadata {
         /// WAV file to inspect.
         file: PathBuf,
+
+        /// Load and scan samples to include peak and RMS levels.
+        #[arg(short, long)]
+        full: bool,
     },
 
     /// Normalize the peak level to 0 dBFS.
@@ -93,6 +97,88 @@ enum Command {
         /// Destination WAV file; defaults to overwriting the input file.
         output: Option<PathBuf>,
     },
+
+    /// Split a stereo WAV file into separate mono left and right files.
+    SplitStereo {
+        /// Stereo WAV file to split.
+        input: PathBuf,
+
+        /// Destination for the left channel; omit both outputs to derive them.
+        #[arg(requires = "right_output")]
+        left_output: Option<PathBuf>,
+
+        /// Destination for the right channel; omit both outputs to derive them.
+        #[arg(requires = "left_output")]
+        right_output: Option<PathBuf>,
+    },
+
+    /// Split a stereo WAV file into separate mono mid and side files.
+    SplitMidSide {
+        /// Stereo WAV file to split.
+        input: PathBuf,
+
+        /// Destination for the mid signal; omit both outputs to derive them.
+        #[arg(requires = "side_output")]
+        mid_output: Option<PathBuf>,
+
+        /// Destination for the side signal; omit both outputs to derive them.
+        #[arg(requires = "mid_output")]
+        side_output: Option<PathBuf>,
+    },
+
+    /// Split a WAV file at one or more millisecond positions.
+    Split {
+        /// WAV file to split.
+        input: PathBuf,
+
+        /// Increasing split positions in milliseconds from the start.
+        #[arg(required = true, num_args = 1..)]
+        split_times_ms: Vec<u64>,
+    },
+
+    /// Combine separate mono left and right WAV files into stereo.
+    LeftRightToStereo {
+        /// Mono left-channel input file.
+        left_input: PathBuf,
+
+        /// Mono right-channel input file.
+        right_input: PathBuf,
+
+        /// Destination stereo WAV file.
+        output: PathBuf,
+    },
+
+    /// Decode separate mono mid and side WAV files into stereo.
+    MidSideToStereo {
+        /// Mono mid-signal input file.
+        mid_input: PathBuf,
+
+        /// Mono side-signal input file.
+        side_input: PathBuf,
+
+        /// Destination stereo WAV file.
+        output: PathBuf,
+    },
+
+    /// Mix two or more WAV files starting at the first frame.
+    Mix {
+        /// Destination mixed WAV file.
+        output: PathBuf,
+
+        /// Input WAV files to mix.
+        #[arg(required = true, num_args = 2..)]
+        inputs: Vec<PathBuf>,
+    },
+
+    /// Join two or more compatible WAV files end-to-end.
+    Join {
+        /// Destination joined WAV file.
+        output: PathBuf,
+
+        /// Input WAV files to join in order.
+        #[arg(required = true, num_args = 2..)]
+        inputs: Vec<PathBuf>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -107,9 +193,13 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> Result<(), WavError> {
     match cli.command {
-        Command::Metadata { file } => {
-            let wav_file = WavFile::open_metadata(file)?;
-            println!("{wav_file}");
+        Command::Metadata { file, full } => {
+            let wav_file = if full {
+                WavFile::open(file)?
+            } else {
+                WavFile::open_metadata(file)?
+            };
+            println!("{}", metadata_report(&wav_file, full)?);
         }
         Command::Normalize { input, output } => {
             process_file(input, output, WavFile::normalize)?;
@@ -146,6 +236,71 @@ fn run(cli: Cli) -> Result<(), WavError> {
         Command::SwapChannels { input, output } => {
             process_file(input, output, WavFile::swap_channels)?;
         }
+        Command::SplitStereo {
+            input,
+            left_output,
+            right_output,
+        } => {
+            let (left_output, right_output) = match (left_output, right_output) {
+                (Some(left), Some(right)) => (left, right),
+                (None, None) => default_split_stereo_outputs(&input),
+                _ => unreachable!("clap requires both split-stereo output paths or neither"),
+            };
+            let stereo = WavFile::open(input)?;
+            let (left, right) = stereo.split_stereo()?;
+            left.save(left_output)?;
+            right.save(right_output)?;
+        }
+        Command::SplitMidSide {
+            input,
+            mid_output,
+            side_output,
+        } => {
+            let (mid_output, side_output) = match (mid_output, side_output) {
+                (Some(mid), Some(side)) => (mid, side),
+                (None, None) => default_split_mid_side_outputs(&input),
+                _ => unreachable!("clap requires both split-mid-side output paths or neither"),
+            };
+            let stereo = WavFile::open(input)?;
+            let (mid, side) = stereo.split_mid_side()?;
+            mid.save(mid_output)?;
+            side.save(side_output)?;
+        }
+        Command::Split {
+            input,
+            split_times_ms,
+        } => {
+            let wav_file = WavFile::open(&input)?;
+            let outputs = wav_file.split_at_times(&split_times_ms)?;
+
+            for (index, output) in outputs.into_iter().enumerate() {
+                output.save(path_with_stem_suffix(&input, &format!("_{}", index + 1)))?;
+            }
+        }
+        Command::LeftRightToStereo {
+            left_input,
+            right_input,
+            output,
+        } => {
+            let left = WavFile::open(left_input)?;
+            let right = WavFile::open(right_input)?;
+            WavFile::combine_left_right(&left, &right)?.save(output)?;
+        }
+        Command::MidSideToStereo {
+            mid_input,
+            side_input,
+            output,
+        } => {
+            let mid = WavFile::open(mid_input)?;
+            let side = WavFile::open(side_input)?;
+            WavFile::combine_mid_side(&mid, &side)?.save(output)?;
+        }
+        Command::Mix { output, inputs } => {
+            WavFile::mix(&open_files(inputs)?)?.save(output)?;
+        }
+        Command::Join { output, inputs } => {
+            WavFile::join(&open_files(inputs)?)?.save(output)?;
+        }
     }
 
     Ok(())
@@ -162,6 +317,52 @@ fn process_file(
     wav_file.save(output)
 }
 
+fn open_files(paths: Vec<PathBuf>) -> Result<Vec<WavFile>, WavError> {
+    paths.into_iter().map(WavFile::open).collect()
+}
+
+fn metadata_report(wav_file: &WavFile, full: bool) -> Result<String, WavError> {
+    use std::fmt::Write as _;
+
+    let mut report = wav_file.to_string();
+    if full {
+        let peak_db = wav_file.peak_db()?;
+        let rms_db = wav_file.rms_db()?;
+        write!(
+            report,
+            "\n\nLevels\n  Peak: {peak_db:.2} dBFS\n  RMS: {rms_db:.2} dBFS"
+        )
+        .expect("writing to a string cannot fail");
+    }
+    Ok(report)
+}
+
+fn default_split_stereo_outputs(input: &Path) -> (PathBuf, PathBuf) {
+    (
+        path_with_stem_suffix(input, "_l"),
+        path_with_stem_suffix(input, "_r"),
+    )
+}
+
+fn default_split_mid_side_outputs(input: &Path) -> (PathBuf, PathBuf) {
+    (
+        path_with_stem_suffix(input, "_mid"),
+        path_with_stem_suffix(input, "_side"),
+    )
+}
+
+fn path_with_stem_suffix(path: &Path, suffix: &str) -> PathBuf {
+    let mut file_name = path.file_stem().unwrap_or_default().to_os_string();
+    file_name.push(suffix);
+
+    if let Some(extension) = path.extension() {
+        file_name.push(".");
+        file_name.push(extension);
+    }
+
+    path.with_file_name(file_name)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -169,7 +370,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use clap::{CommandFactory, Parser};
-    use wavlab::WavFile;
+    use wavlab::{WavFile, constants::MINUS_THREE_DB};
 
     use super::{Cli, Command, run};
 
@@ -186,6 +387,10 @@ mod tests {
             let id = NEXT_TEST_FILE.fetch_add(1, Ordering::Relaxed);
             let path = std::env::temp_dir()
                 .join(format!("wavlab-cli-{}-{id}-{name}.wav", std::process::id()));
+            self.track(path)
+        }
+
+        fn track(&mut self, path: PathBuf) -> PathBuf {
             self.0.push(path.clone());
             path
         }
@@ -236,8 +441,38 @@ mod tests {
 
         assert!(matches!(
             cli.command,
-            Command::Metadata { file } if file == Path::new("example.wav")
+            Command::Metadata { file, full: false } if file == Path::new("example.wav")
         ));
+
+        let full = Cli::try_parse_from(["wavlab", "metadata", "--full", "example.wav"])
+            .expect("valid full metadata command");
+        assert!(matches!(
+            full.command,
+            Command::Metadata { file, full: true } if file == Path::new("example.wav")
+        ));
+
+        let short = Cli::try_parse_from(["wavlab", "metadata", "-f", "example.wav"])
+            .expect("valid short full metadata command");
+        assert!(matches!(
+            short.command,
+            Command::Metadata { file, full: true } if file == Path::new("example.wav")
+        ));
+    }
+
+    #[test]
+    fn full_metadata_report_includes_peak_and_rms_levels() {
+        let mut wav_file = WavFile::new(1, 48_000, 24).expect("valid PCM settings");
+        wav_file
+            .set_samples(vec![0.5, -0.5, 0.0, 0.0])
+            .expect("complete sample frames");
+
+        let full = super::metadata_report(&wav_file, true).expect("loaded samples");
+        let summary = super::metadata_report(&wav_file, false).expect("metadata report");
+
+        assert!(full.contains("Samples: 4 loaded"));
+        assert!(full.contains("Peak: -6.02 dBFS"));
+        assert!(full.contains("RMS: -9.03 dBFS"));
+        assert!(!summary.contains("Levels"));
     }
 
     #[test]
@@ -300,6 +535,141 @@ mod tests {
             Command::SwapChannels { input, output: Some(output) }
                 if input == Path::new("in.wav") && output == Path::new("out.wav")
         ));
+
+        let split_stereo =
+            Cli::try_parse_from(["wavlab", "split-stereo", "in.wav", "left.wav", "right.wav"])
+                .expect("valid split-stereo command");
+        assert!(matches!(
+            split_stereo.command,
+            Command::SplitStereo {
+                input,
+                left_output: Some(left_output),
+                right_output: Some(right_output),
+            }
+                if input == Path::new("in.wav")
+                    && left_output == Path::new("left.wav")
+                    && right_output == Path::new("right.wav")
+        ));
+
+        let split_stereo_with_defaults = Cli::try_parse_from(["wavlab", "split-stereo", "in.wav"])
+            .expect("valid split-stereo command using default outputs");
+        assert!(matches!(
+            split_stereo_with_defaults.command,
+            Command::SplitStereo {
+                input,
+                left_output: None,
+                right_output: None,
+            } if input == Path::new("in.wav")
+        ));
+
+        assert!(
+            Cli::try_parse_from(["wavlab", "split-stereo", "in.wav", "left.wav"]).is_err(),
+            "split-stereo should require both output paths or neither"
+        );
+
+        let split_mid_side =
+            Cli::try_parse_from(["wavlab", "split-mid-side", "in.wav", "mid.wav", "side.wav"])
+                .expect("valid split-mid-side command");
+        assert!(matches!(
+            split_mid_side.command,
+            Command::SplitMidSide {
+                input,
+                mid_output: Some(mid_output),
+                side_output: Some(side_output),
+            }
+                if input == Path::new("in.wav")
+                    && mid_output == Path::new("mid.wav")
+                    && side_output == Path::new("side.wav")
+        ));
+
+        let split_mid_side_with_defaults =
+            Cli::try_parse_from(["wavlab", "split-mid-side", "in.wav"])
+                .expect("valid split-mid-side command using default outputs");
+        assert!(matches!(
+            split_mid_side_with_defaults.command,
+            Command::SplitMidSide {
+                input,
+                mid_output: None,
+                side_output: None,
+            } if input == Path::new("in.wav")
+        ));
+
+        assert!(
+            Cli::try_parse_from(["wavlab", "split-mid-side", "in.wav", "mid.wav"]).is_err(),
+            "split-mid-side should require both output paths or neither"
+        );
+
+        let split = Cli::try_parse_from(["wavlab", "split", "in.wav", "100", "250"])
+            .expect("valid split command");
+        assert!(matches!(
+            split.command,
+            Command::Split { input, split_times_ms }
+                if input == Path::new("in.wav") && split_times_ms == [100, 250]
+        ));
+
+        assert!(
+            Cli::try_parse_from(["wavlab", "split", "in.wav"]).is_err(),
+            "split should require at least one time"
+        );
+
+        let left_right = Cli::try_parse_from([
+            "wavlab",
+            "left-right-to-stereo",
+            "left.wav",
+            "right.wav",
+            "out.wav",
+        ])
+        .expect("valid left-right-to-stereo command");
+        assert!(matches!(
+            left_right.command,
+            Command::LeftRightToStereo { left_input, right_input, output }
+                if left_input == Path::new("left.wav")
+                    && right_input == Path::new("right.wav")
+                    && output == Path::new("out.wav")
+        ));
+
+        let mid_side = Cli::try_parse_from([
+            "wavlab",
+            "mid-side-to-stereo",
+            "mid.wav",
+            "side.wav",
+            "out.wav",
+        ])
+        .expect("valid mid-side-to-stereo command");
+        assert!(matches!(
+            mid_side.command,
+            Command::MidSideToStereo { mid_input, side_input, output }
+                if mid_input == Path::new("mid.wav")
+                    && side_input == Path::new("side.wav")
+                    && output == Path::new("out.wav")
+        ));
+
+        let mix = Cli::try_parse_from(["wavlab", "mix", "out.wav", "first.wav", "second.wav"])
+            .expect("valid mix command");
+        assert!(matches!(
+            mix.command,
+            Command::Mix { output, inputs }
+                if output == Path::new("out.wav")
+                    && inputs == [PathBuf::from("first.wav"), PathBuf::from("second.wav")]
+        ));
+
+        let join = Cli::try_parse_from(["wavlab", "join", "out.wav", "first.wav", "second.wav"])
+            .expect("valid join command");
+        assert!(matches!(
+            join.command,
+            Command::Join { output, inputs }
+                if output == Path::new("out.wav")
+                    && inputs == [PathBuf::from("first.wav"), PathBuf::from("second.wav")]
+        ));
+
+        assert!(
+            Cli::try_parse_from(["wavlab", "mix", "out.wav", "only.wav"]).is_err(),
+            "mix should require at least two inputs"
+        );
+        assert!(
+            Cli::try_parse_from(["wavlab", "join", "out.wav", "only.wav"]).is_err(),
+            "join should require at least two inputs"
+        );
     }
 
     #[test]
@@ -409,5 +779,203 @@ mod tests {
 
         let original = WavFile::open(input).expect("open original input");
         assert_samples_approximately_eq(original.samples().unwrap(), &[0.1, 0.2, 0.3, 0.4]);
+    }
+
+    #[test]
+    fn split_stereo_command_writes_two_mono_files() {
+        let mut files = TestFiles::new();
+        let input = files.path("split-stereo-input");
+        let left_output = files.path("split-stereo-left");
+        let right_output = files.path("split-stereo-right");
+        save_file(&input, 2, vec![0.1, -0.2, 0.3, -0.4]);
+
+        run(Cli {
+            command: Command::SplitStereo {
+                input,
+                left_output: Some(left_output.clone()),
+                right_output: Some(right_output.clone()),
+            },
+        })
+        .expect("split stereo file");
+
+        let left = WavFile::open(left_output).expect("open left output");
+        let right = WavFile::open(right_output).expect("open right output");
+        assert_eq!(left.number_of_channels(), 1);
+        assert_eq!(right.number_of_channels(), 1);
+        assert_samples_approximately_eq(left.samples().unwrap(), &[0.1, 0.3]);
+        assert_samples_approximately_eq(right.samples().unwrap(), &[-0.2, -0.4]);
+    }
+
+    #[test]
+    fn split_stereo_command_derives_output_paths_when_omitted() {
+        let mut files = TestFiles::new();
+        let input = files.path("split-stereo-default-input");
+        let (left_output, right_output) = super::default_split_stereo_outputs(&input);
+        files.track(left_output.clone());
+        files.track(right_output.clone());
+        save_file(&input, 2, vec![0.1, -0.2, 0.3, -0.4]);
+
+        run(Cli {
+            command: Command::SplitStereo {
+                input,
+                left_output: None,
+                right_output: None,
+            },
+        })
+        .expect("split stereo file using default outputs");
+
+        let left = WavFile::open(left_output).expect("open default left output");
+        let right = WavFile::open(right_output).expect("open default right output");
+        assert_samples_approximately_eq(left.samples().unwrap(), &[0.1, 0.3]);
+        assert_samples_approximately_eq(right.samples().unwrap(), &[-0.2, -0.4]);
+    }
+
+    #[test]
+    fn default_split_stereo_outputs_preserve_directory_and_extension() {
+        let (left, right) =
+            super::default_split_stereo_outputs(Path::new("audio/example.original.wav"));
+
+        assert_eq!(left, Path::new("audio/example.original_l.wav"));
+        assert_eq!(right, Path::new("audio/example.original_r.wav"));
+    }
+
+    #[test]
+    fn split_mid_side_command_derives_and_writes_output_files() {
+        let mut files = TestFiles::new();
+        let input = files.path("split-mid-side-input");
+        let (mid_output, side_output) = super::default_split_mid_side_outputs(&input);
+        files.track(mid_output.clone());
+        files.track(side_output.clone());
+        save_file(&input, 2, vec![0.5, 0.5, 0.5, -0.5]);
+
+        run(Cli {
+            command: Command::SplitMidSide {
+                input,
+                mid_output: None,
+                side_output: None,
+            },
+        })
+        .expect("split stereo file into mid and side");
+
+        let mid = WavFile::open(mid_output).expect("open default mid output");
+        let side = WavFile::open(side_output).expect("open default side output");
+        assert_eq!(mid.number_of_channels(), 1);
+        assert_eq!(side.number_of_channels(), 1);
+        assert_samples_approximately_eq(mid.samples().unwrap(), &[MINUS_THREE_DB, 0.0]);
+        assert_samples_approximately_eq(side.samples().unwrap(), &[0.0, MINUS_THREE_DB]);
+    }
+
+    #[test]
+    fn split_command_writes_numbered_output_files() {
+        let mut files = TestFiles::new();
+        let input = files.path("split-at-times-input");
+        let first_output = files.track(super::path_with_stem_suffix(&input, "_1"));
+        let second_output = files.track(super::path_with_stem_suffix(&input, "_2"));
+        let third_output = files.track(super::path_with_stem_suffix(&input, "_3"));
+        let mut wav_file = WavFile::new(1, 1_000, 24).expect("valid PCM settings");
+        wav_file
+            .set_samples(vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+            .expect("complete sample frames");
+        wav_file.save(&input).expect("save test WAV file");
+
+        run(Cli {
+            command: Command::Split {
+                input,
+                split_times_ms: vec![2, 5],
+            },
+        })
+        .expect("split file at times");
+
+        let first = WavFile::open(first_output).expect("open first split output");
+        let second = WavFile::open(second_output).expect("open second split output");
+        let third = WavFile::open(third_output).expect("open third split output");
+        assert_samples_approximately_eq(first.samples().unwrap(), &[0.0, 0.1]);
+        assert_samples_approximately_eq(second.samples().unwrap(), &[0.2, 0.3, 0.4]);
+        assert_samples_approximately_eq(third.samples().unwrap(), &[0.5]);
+    }
+
+    #[test]
+    fn default_mid_side_outputs_preserve_directory_and_extension() {
+        let (mid, side) =
+            super::default_split_mid_side_outputs(Path::new("audio/example.original.wav"));
+
+        assert_eq!(mid, Path::new("audio/example.original_mid.wav"));
+        assert_eq!(side, Path::new("audio/example.original_side.wav"));
+    }
+
+    #[test]
+    fn channel_combination_commands_write_stereo_files() {
+        let mut files = TestFiles::new();
+        let left_input = files.path("combine-left-input");
+        let right_input = files.path("combine-right-input");
+        let left_right_output = files.path("combine-left-right-output");
+        let mid_input = files.path("combine-mid-input");
+        let side_input = files.path("combine-side-input");
+        let mid_side_output = files.path("combine-mid-side-output");
+        save_mono_file(&left_input, vec![0.1, 0.2]);
+        save_mono_file(&right_input, vec![-0.1]);
+        save_mono_file(&mid_input, vec![0.5]);
+        save_mono_file(&side_input, vec![0.25]);
+
+        run(Cli {
+            command: Command::LeftRightToStereo {
+                left_input,
+                right_input,
+                output: left_right_output.clone(),
+            },
+        })
+        .expect("combine left and right inputs");
+        run(Cli {
+            command: Command::MidSideToStereo {
+                mid_input,
+                side_input,
+                output: mid_side_output.clone(),
+            },
+        })
+        .expect("combine mid and side inputs");
+
+        let left_right = WavFile::open(left_right_output).expect("open left/right output");
+        assert_eq!(left_right.number_of_channels(), 2);
+        assert_samples_approximately_eq(left_right.samples().unwrap(), &[0.1, -0.1, 0.2, 0.0]);
+
+        let mid_side = WavFile::open(mid_side_output).expect("open mid/side output");
+        let decode_scale = 0.5 / MINUS_THREE_DB;
+        assert_eq!(mid_side.number_of_channels(), 2);
+        assert_samples_approximately_eq(
+            mid_side.samples().unwrap(),
+            &[0.75 * decode_scale, 0.25 * decode_scale],
+        );
+    }
+
+    #[test]
+    fn mix_and_join_commands_write_combined_files() {
+        let mut files = TestFiles::new();
+        let first_input = files.path("multi-combine-first-input");
+        let second_input = files.path("multi-combine-second-input");
+        let mix_output = files.path("mix-output");
+        let join_output = files.path("join-output");
+        save_mono_file(&first_input, vec![0.5, 0.25]);
+        save_mono_file(&second_input, vec![0.5]);
+
+        run(Cli {
+            command: Command::Mix {
+                output: mix_output.clone(),
+                inputs: vec![first_input.clone(), second_input.clone()],
+            },
+        })
+        .expect("mix input files");
+        run(Cli {
+            command: Command::Join {
+                output: join_output.clone(),
+                inputs: vec![first_input, second_input],
+            },
+        })
+        .expect("join input files");
+
+        let mixed = WavFile::open(mix_output).expect("open mixed output");
+        assert_samples_approximately_eq(mixed.samples().unwrap(), &[1.0, 0.25]);
+
+        let joined = WavFile::open(join_output).expect("open joined output");
+        assert_samples_approximately_eq(joined.samples().unwrap(), &[0.5, 0.25, 0.5]);
     }
 }

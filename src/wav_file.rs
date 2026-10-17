@@ -67,6 +67,21 @@ pub enum WavError {
     Io(std::io::Error),
     InvalidFile(String),
     UnsupportedChannelCount(u16),
+    ExpectedMono(u16),
+    ExpectedStereo(u16),
+    InvalidSplitTime(u64),
+    TooFewInputs {
+        minimum: usize,
+        actual: usize,
+    },
+    SampleRateMismatch {
+        expected: u32,
+        actual: u32,
+    },
+    ChannelCountMismatch {
+        expected: u16,
+        actual: u16,
+    },
     InvalidSampleRate(u32),
     UnsupportedBitsPerSample(u16),
     ByteRateOverflow {
@@ -228,6 +243,32 @@ impl Display for WavError {
                 formatter,
                 "unsupported channel count {count}; only mono and stereo PCM are supported"
             ),
+            Self::ExpectedMono(count) => {
+                write!(formatter, "expected a mono file, found {count} channels")
+            }
+            Self::ExpectedStereo(count) => {
+                write!(formatter, "expected a stereo file, found {count} channel")?;
+                if *count != 1 {
+                    formatter.write_str("s")?;
+                }
+                Ok(())
+            }
+            Self::InvalidSplitTime(milliseconds) => write!(
+                formatter,
+                "split time {milliseconds} ms must resolve to a distinct, increasing frame boundary inside the file"
+            ),
+            Self::TooFewInputs { minimum, actual } => write!(
+                formatter,
+                "expected at least {minimum} input files, found {actual}"
+            ),
+            Self::SampleRateMismatch { expected, actual } => write!(
+                formatter,
+                "sample rate mismatch: expected {expected} Hz, found {actual} Hz"
+            ),
+            Self::ChannelCountMismatch { expected, actual } => write!(
+                formatter,
+                "channel count mismatch: expected {expected}, found {actual}"
+            ),
             Self::InvalidSampleRate(sample_rate) => {
                 write!(
                     formatter,
@@ -245,9 +286,7 @@ impl Display for WavError {
                 formatter,
                 "byte rate exceeds the WAV limit for sample rate {sample_rate} and block alignment {block_align}"
             ),
-            Self::SamplesNotLoaded => {
-                write!(formatter, "sample data was not loaded and cannot be saved")
-            }
+            Self::SamplesNotLoaded => formatter.write_str("sample data was not loaded"),
             Self::IncompleteSampleFrame {
                 sample_count,
                 number_of_channels,

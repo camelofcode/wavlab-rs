@@ -12,17 +12,17 @@ name.
 - [x] `reverse`
 - [x] `flip-phase`
 - [x] `swap-channels`
-- [ ] `split-stereo`
-- [ ] `left-right-to-stereo`
-- [ ] `split-mid-side`
-- [ ] `mid-side-to-stereo`
-- [ ] `get-peak-db`
-- [ ] `get-rms-db`
+- [x] `split-stereo`
+- [x] `left-right-to-stereo`
+- [x] `split-mid-side`
+- [x] `mid-side-to-stereo`
+- [x] `get-peak-db` (Rust: `metadata --full`)
+- [x] `get-rms-db` (Rust: `metadata --full`)
 - [x] `gain`
 - [x] `gain-db`
-- [ ] `mix`
-- [ ] `split`
-- [ ] `join`
+- [x] `mix`
+- [x] `split`
+- [x] `join`
 
 ## EQ
 
