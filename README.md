@@ -79,3 +79,10 @@ The test suite checks that the committed reference is current.
 - Saving reconstructs the WAV structure; output is not necessarily
   byte-for-byte identical to the input.
 
+## License
+
+Copyright (C) 2026 Christopher Clayton.
+
+This project is free software licensed under the
+[GNU General Public License version 3 or later](LICENSE).
+
