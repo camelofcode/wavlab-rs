@@ -9,9 +9,9 @@ name.
 
 - [x] `stat` (Rust: `metadata`)
 - [x] `normalise` (Rust: `normalize`)
-- [ ] `reverse`
-- [ ] `flip-phase`
-- [ ] `swap-channels`
+- [x] `reverse`
+- [x] `flip-phase`
+- [x] `swap-channels`
 - [ ] `split-stereo`
 - [ ] `left-right-to-stereo`
 - [ ] `split-mid-side`

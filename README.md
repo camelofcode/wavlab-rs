@@ -45,6 +45,9 @@ wavlab normalize input.wav [output.wav]
 wavlab normalize-db input.wav <target-db> [output.wav]
 wavlab gain input.wav <linear-gain> [output.wav]
 wavlab gain-db input.wav <gain-db> [output.wav]
+wavlab reverse input.wav [output.wav]
+wavlab flip-phase input.wav [output.wav]
+wavlab swap-channels input.wav [output.wav]
 ```
 
 When the output path is omitted, the input file is updated in place. Gain is

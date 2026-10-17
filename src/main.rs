@@ -66,6 +66,33 @@ enum Command {
         /// Destination WAV file; defaults to overwriting the input file.
         output: Option<PathBuf>,
     },
+
+    /// Reverse the audio while preserving the channel order in each frame.
+    Reverse {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Invert the polarity of every sample.
+    FlipPhase {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Swap the left and right channels of a stereo file.
+    SwapChannels {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -109,6 +136,15 @@ fn run(cli: Cli) -> Result<(), WavError> {
             output,
         } => {
             process_file(input, output, |wav_file| wav_file.apply_gain_db(gain_db))?;
+        }
+        Command::Reverse { input, output } => {
+            process_file(input, output, WavFile::reverse)?;
+        }
+        Command::FlipPhase { input, output } => {
+            process_file(input, output, WavFile::flip_phase)?;
+        }
+        Command::SwapChannels { input, output } => {
+            process_file(input, output, WavFile::swap_channels)?;
         }
     }
 
@@ -163,12 +199,17 @@ mod tests {
         }
     }
 
-    fn save_mono_file(path: &Path, samples: Vec<f64>) {
-        let mut wav_file = WavFile::new(1, 48_000, 24).expect("valid PCM settings");
+    fn save_file(path: &Path, number_of_channels: u16, samples: Vec<f64>) {
+        let mut wav_file =
+            WavFile::new(number_of_channels, 48_000, 24).expect("valid PCM settings");
         wav_file
             .set_samples(samples)
             .expect("complete sample frames");
         wav_file.save(path).expect("save test WAV file");
+    }
+
+    fn save_mono_file(path: &Path, samples: Vec<f64>) {
+        save_file(path, 1, samples);
     }
 
     fn assert_samples_approximately_eq(actual: &[f64], expected: &[f64]) {
@@ -236,6 +277,29 @@ mod tests {
             Command::GainDb { input, gain_db, output: None }
                 if input == Path::new("in.wav") && gain_db == -3.0
         ));
+
+        let reverse = Cli::try_parse_from(["wavlab", "reverse", "in.wav", "out.wav"])
+            .expect("valid reverse command");
+        assert!(matches!(
+            reverse.command,
+            Command::Reverse { input, output: Some(output) }
+                if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+
+        let flip_phase = Cli::try_parse_from(["wavlab", "flip-phase", "in.wav"])
+            .expect("valid flip-phase command");
+        assert!(matches!(
+            flip_phase.command,
+            Command::FlipPhase { input, output: None } if input == Path::new("in.wav")
+        ));
+
+        let swap_channels = Cli::try_parse_from(["wavlab", "swap-channels", "in.wav", "out.wav"])
+            .expect("valid swap-channels command");
+        assert!(matches!(
+            swap_channels.command,
+            Command::SwapChannels { input, output: Some(output) }
+                if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
     }
 
     #[test]
@@ -301,5 +365,49 @@ mod tests {
 
         let original = WavFile::open(input).expect("open original input");
         assert_samples_approximately_eq(original.samples().unwrap(), &[0.025, -0.05]);
+    }
+
+    #[test]
+    fn frame_processing_commands_write_to_the_requested_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("frame-processing-input");
+        let reverse_output = files.path("reverse-output");
+        let flip_phase_output = files.path("flip-phase-output");
+        let swap_channels_output = files.path("swap-channels-output");
+        save_file(&input, 2, vec![0.1, 0.2, 0.3, 0.4]);
+
+        run(Cli {
+            command: Command::Reverse {
+                input: input.clone(),
+                output: Some(reverse_output.clone()),
+            },
+        })
+        .expect("reverse output");
+        run(Cli {
+            command: Command::FlipPhase {
+                input: input.clone(),
+                output: Some(flip_phase_output.clone()),
+            },
+        })
+        .expect("flip phase output");
+        run(Cli {
+            command: Command::SwapChannels {
+                input: input.clone(),
+                output: Some(swap_channels_output.clone()),
+            },
+        })
+        .expect("swap channels output");
+
+        let reversed = WavFile::open(reverse_output).expect("open reversed output");
+        assert_samples_approximately_eq(reversed.samples().unwrap(), &[0.3, 0.4, 0.1, 0.2]);
+
+        let flipped = WavFile::open(flip_phase_output).expect("open flipped output");
+        assert_samples_approximately_eq(flipped.samples().unwrap(), &[-0.1, -0.2, -0.3, -0.4]);
+
+        let swapped = WavFile::open(swap_channels_output).expect("open swapped output");
+        assert_samples_approximately_eq(swapped.samples().unwrap(), &[0.2, 0.1, 0.4, 0.3]);
+
+        let original = WavFile::open(input).expect("open original input");
+        assert_samples_approximately_eq(original.samples().unwrap(), &[0.1, 0.2, 0.3, 0.4]);
     }
 }
