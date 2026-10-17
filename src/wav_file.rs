@@ -8,6 +8,7 @@ const PCM_FORMAT_CHUNK_SIZE: u32 = 16;
 const EMPTY_PCM_FILE_LENGTH: u64 = 44;
 const EMPTY_PCM_RIFF_CHUNK_SIZE: u32 = 36;
 
+/// An integer PCM WAV file and, when loaded, its interleaved audio samples.
 pub struct WavFile {
     length_in_bytes: u64,
     file_chunk: FileChunk,
@@ -63,40 +64,70 @@ struct DataChunk {
 }
 
 #[derive(Debug)]
+/// An error encountered while reading, creating, processing, or saving a WAV file.
 pub enum WavError {
+    /// An underlying filesystem or stream error.
     Io(std::io::Error),
+    /// The file does not contain a valid supported WAV structure.
     InvalidFile(String),
+    /// The requested or stored channel count is unsupported.
     UnsupportedChannelCount(u16),
+    /// An operation expected a mono file.
     ExpectedMono(u16),
+    /// An operation expected a stereo file.
     ExpectedStereo(u16),
+    /// A requested split time does not identify a valid boundary.
     InvalidSplitTime(u64),
+    /// An operation received fewer input files than it requires.
     TooFewInputs {
+        /// The minimum number of inputs required.
         minimum: usize,
+        /// The number of inputs supplied.
         actual: usize,
     },
+    /// Input files have different sample rates.
     SampleRateMismatch {
+        /// The sample rate established by the first input.
         expected: u32,
+        /// The incompatible sample rate encountered later.
         actual: u32,
     },
+    /// Input files have different channel counts.
     ChannelCountMismatch {
+        /// The channel count established by the first input.
         expected: u16,
+        /// The incompatible channel count encountered later.
         actual: u16,
     },
+    /// A sample rate of zero was requested or encountered.
     InvalidSampleRate(u32),
+    /// The requested or stored integer PCM bit depth is unsupported.
     UnsupportedBitsPerSample(u16),
+    /// The WAV byte rate cannot be represented by the file format.
     ByteRateOverflow {
+        /// The sample rate used in the calculation.
         sample_rate: u32,
+        /// The number of bytes in one sample frame.
         block_align: u16,
     },
+    /// An operation needs samples from a metadata-only file.
     SamplesNotLoaded,
+    /// The sample count does not contain complete interleaved frames.
     IncompleteSampleFrame {
+        /// The number of supplied samples.
         sample_count: usize,
+        /// The number of channels in each frame.
         number_of_channels: u16,
     },
+    /// A size cannot be represented by the WAV file format or this platform.
     SizeOverflow(&'static str),
+    /// A fixed-size BEXT text field is too long.
     TextFieldTooLong {
+        /// The name of the BEXT field.
         field: &'static str,
+        /// The maximum encoded field length.
         maximum: usize,
+        /// The supplied encoded field length.
         actual: usize,
     },
 }
@@ -109,6 +140,12 @@ struct PcmLayout {
 }
 
 impl WavFile {
+    /// Creates an empty integer PCM WAV file with the requested format.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the channel count, sample rate, or bit depth is not
+    /// supported, or if their resulting byte rate exceeds the WAV limit.
     pub fn new(
         number_of_channels: u16,
         sample_rate: u32,
