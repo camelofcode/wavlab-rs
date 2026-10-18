@@ -75,6 +75,130 @@ pub enum Command {
         output: Option<PathBuf>,
     },
 
+    /// Apply a peaking EQ boost or cut around a center frequency.
+    #[command(name = "eq-peak")]
+    EqPeak {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Center frequency of the affected band, in Hz.
+        frequency: f64,
+
+        /// Gain at the center frequency, in dB.
+        #[arg(allow_hyphen_values = true)]
+        gain_db: f64,
+
+        /// Width of the affected band, in octaves.
+        bandwidth: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Apply a low-shelf EQ boost or cut.
+    #[command(name = "eq-lowshelf")]
+    EqLowShelf {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Midpoint of the shelf transition, in Hz.
+        frequency: f64,
+
+        /// Gain below the shelf transition, in dB.
+        #[arg(allow_hyphen_values = true)]
+        gain_db: f64,
+
+        /// Quality factor controlling the shape of the transition.
+        q: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Apply a high-shelf EQ boost or cut.
+    #[command(name = "eq-highshelf")]
+    EqHighShelf {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Midpoint of the shelf transition, in Hz.
+        frequency: f64,
+
+        /// Gain above the shelf transition, in dB.
+        #[arg(allow_hyphen_values = true)]
+        gain_db: f64,
+
+        /// Quality factor controlling the shape of the transition.
+        q: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Apply an all-pass filter that changes phase while preserving magnitude.
+    #[command(name = "eq-allpass")]
+    EqAllPass {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Center frequency of the phase transition, in Hz.
+        frequency: f64,
+
+        /// Width of the phase transition, in octaves.
+        bandwidth: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Apply a constant-skirt-gain band-pass filter.
+    #[command(name = "eq-bandpass")]
+    EqBandPass {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Center frequency of the pass band, in Hz.
+        frequency: f64,
+
+        /// Width of the pass band, in octaves.
+        bandwidth: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Apply a 12 dB-per-octave low-pass filter.
+    #[command(name = "eq-lowpass")]
+    EqLowPass {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Cutoff frequency, in Hz.
+        frequency: f64,
+
+        /// Quality factor controlling resonance around the cutoff.
+        q: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Apply a 12 dB-per-octave high-pass filter.
+    #[command(name = "eq-highpass")]
+    EqHighPass {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Cutoff frequency, in Hz.
+        frequency: f64,
+
+        /// Quality factor controlling resonance around the cutoff.
+        q: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
     /// Reverse the audio while preserving the channel order in each frame.
     Reverse {
         /// WAV file to process.

@@ -18,6 +18,13 @@ Commands:
   normalize-db          Normalize the peak to a specified level in dBFS
   gain                  Multiply every sample by a linear gain factor
   gain-db               Apply an amplitude gain measured in decibels
+  eq-peak               Apply a peaking EQ boost or cut around a center frequency
+  eq-lowshelf           Apply a low-shelf EQ boost or cut
+  eq-highshelf          Apply a high-shelf EQ boost or cut
+  eq-allpass            Apply an all-pass filter that changes phase while preserving magnitude
+  eq-bandpass           Apply a constant-skirt-gain band-pass filter
+  eq-lowpass            Apply a 12 dB-per-octave low-pass filter
+  eq-highpass           Apply a 12 dB-per-octave high-pass filter
   reverse               Reverse the audio while preserving the channel order in each frame
   flip-phase            Invert the polarity of every sample
   swap-channels         Swap the left and right channels of a stereo file
@@ -133,6 +140,190 @@ Arguments:
 
   <GAIN_DB>
           Gain in dB. Positive values may cause clipping
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab eq-peak`
+
+```text
+Apply a peaking EQ boost or cut around a center frequency
+
+Usage: wavlab eq-peak <INPUT> <FREQUENCY> <GAIN_DB> <BANDWIDTH> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <FREQUENCY>
+          Center frequency of the affected band, in Hz
+
+  <GAIN_DB>
+          Gain at the center frequency, in dB
+
+  <BANDWIDTH>
+          Width of the affected band, in octaves
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab eq-lowshelf`
+
+```text
+Apply a low-shelf EQ boost or cut
+
+Usage: wavlab eq-lowshelf <INPUT> <FREQUENCY> <GAIN_DB> <Q> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <FREQUENCY>
+          Midpoint of the shelf transition, in Hz
+
+  <GAIN_DB>
+          Gain below the shelf transition, in dB
+
+  <Q>
+          Quality factor controlling the shape of the transition
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab eq-highshelf`
+
+```text
+Apply a high-shelf EQ boost or cut
+
+Usage: wavlab eq-highshelf <INPUT> <FREQUENCY> <GAIN_DB> <Q> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <FREQUENCY>
+          Midpoint of the shelf transition, in Hz
+
+  <GAIN_DB>
+          Gain above the shelf transition, in dB
+
+  <Q>
+          Quality factor controlling the shape of the transition
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab eq-allpass`
+
+```text
+Apply an all-pass filter that changes phase while preserving magnitude
+
+Usage: wavlab eq-allpass <INPUT> <FREQUENCY> <BANDWIDTH> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <FREQUENCY>
+          Center frequency of the phase transition, in Hz
+
+  <BANDWIDTH>
+          Width of the phase transition, in octaves
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab eq-bandpass`
+
+```text
+Apply a constant-skirt-gain band-pass filter
+
+Usage: wavlab eq-bandpass <INPUT> <FREQUENCY> <BANDWIDTH> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <FREQUENCY>
+          Center frequency of the pass band, in Hz
+
+  <BANDWIDTH>
+          Width of the pass band, in octaves
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab eq-lowpass`
+
+```text
+Apply a 12 dB-per-octave low-pass filter
+
+Usage: wavlab eq-lowpass <INPUT> <FREQUENCY> <Q> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <FREQUENCY>
+          Cutoff frequency, in Hz
+
+  <Q>
+          Quality factor controlling resonance around the cutoff
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab eq-highpass`
+
+```text
+Apply a 12 dB-per-octave high-pass filter
+
+Usage: wavlab eq-highpass <INPUT> <FREQUENCY> <Q> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <FREQUENCY>
+          Cutoff frequency, in Hz
+
+  <Q>
+          Quality factor controlling resonance around the cutoff
 
   [OUTPUT]
           Destination WAV file; defaults to overwriting the input file

@@ -26,13 +26,13 @@ name.
 
 ## EQ
 
-- [ ] `eq-peak`
-- [ ] `eq-lowshelf`
-- [ ] `eq-highshelf`
-- [ ] `eq-allpass`
-- [ ] `eq-bandpass`
-- [ ] `eq-lowpass`
-- [ ] `eq-highpass`
+- [x] `eq-peak`
+- [x] `eq-lowshelf`
+- [x] `eq-highshelf`
+- [x] `eq-allpass`
+- [x] `eq-bandpass`
+- [x] `eq-lowpass`
+- [x] `eq-highpass`
 
 ## Effects
 

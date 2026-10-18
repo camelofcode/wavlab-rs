@@ -79,6 +79,19 @@ The test suite checks that the committed reference is current.
 - Saving reconstructs the WAV structure; output is not necessarily
   byte-for-byte identical to the input.
 
+## References
+
+The following technical publications and resources informed algorithm
+implementations in this project. They are cited as background material and do
+not represent bundled third-party source code.
+
+- Robert Bristow-Johnson, “[Cookbook formulae for audio equalizer biquad filter
+  coefficients](https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html),”
+  adapted for the Web Audio specification by Raymond Toy and Doug Schepers.
+- MusicDSP.org, “[C++ class implementation of RBJ
+  Filters](https://www.musicdsp.org/en/latest/Filters/128-c-class-implementation-of-rbj-filters.html),”
+  13 December 2002.
+
 ## License
 
 Copyright (C) 2026 Christopher Clayton.

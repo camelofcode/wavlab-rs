@@ -51,6 +51,79 @@ fn run(cli: Cli) -> Result<(), WavError> {
         } => {
             process_file(input, output, |wav_file| wav_file.apply_gain_db(gain_db))?;
         }
+        Command::EqPeak {
+            input,
+            frequency,
+            gain_db,
+            bandwidth,
+            output,
+        } => {
+            process_file(input, output, |wav_file| {
+                wav_file.apply_peak_eq(frequency, bandwidth, gain_db)
+            })?;
+        }
+        Command::EqLowShelf {
+            input,
+            frequency,
+            gain_db,
+            q,
+            output,
+        } => {
+            process_file(input, output, |wav_file| {
+                wav_file.apply_low_shelf_eq(frequency, q, gain_db)
+            })?;
+        }
+        Command::EqHighShelf {
+            input,
+            frequency,
+            gain_db,
+            q,
+            output,
+        } => {
+            process_file(input, output, |wav_file| {
+                wav_file.apply_high_shelf_eq(frequency, q, gain_db)
+            })?;
+        }
+        Command::EqAllPass {
+            input,
+            frequency,
+            bandwidth,
+            output,
+        } => {
+            process_file(input, output, |wav_file| {
+                wav_file.apply_all_pass_eq(frequency, bandwidth)
+            })?;
+        }
+        Command::EqBandPass {
+            input,
+            frequency,
+            bandwidth,
+            output,
+        } => {
+            process_file(input, output, |wav_file| {
+                wav_file.apply_band_pass_eq(frequency, bandwidth)
+            })?;
+        }
+        Command::EqLowPass {
+            input,
+            frequency,
+            q,
+            output,
+        } => {
+            process_file(input, output, |wav_file| {
+                wav_file.apply_low_pass_eq(frequency, q)
+            })?;
+        }
+        Command::EqHighPass {
+            input,
+            frequency,
+            q,
+            output,
+        } => {
+            process_file(input, output, |wav_file| {
+                wav_file.apply_high_pass_eq(frequency, q)
+            })?;
+        }
         Command::Reverse { input, output } => {
             process_file(input, output, WavFile::reverse)?;
         }
@@ -194,7 +267,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use clap::{CommandFactory, Parser};
-    use wavlab::{WavFile, constants::MINUS_THREE_DB};
+    use wavlab::{WavError, WavFile, constants::MINUS_THREE_DB};
 
     use super::{Cli, Command, run};
 
@@ -253,6 +326,21 @@ mod tests {
         }
     }
 
+    fn assert_processing_command_matches(
+        input: &Path,
+        output: &Path,
+        command: Command,
+        process: impl FnOnce(&mut WavFile) -> Result<(), WavError>,
+    ) {
+        let mut expected = WavFile::open(input).expect("open expected input");
+        process(&mut expected).expect("process expected samples");
+
+        run(Cli { command }).expect("run processing command");
+
+        let actual = WavFile::open(output).expect("open command output");
+        assert_samples_approximately_eq(actual.samples().unwrap(), expected.samples().unwrap());
+    }
+
     #[test]
     fn cli_definition_is_valid() {
         Cli::command().debug_assert();
@@ -297,6 +385,130 @@ mod tests {
         assert!(full.contains("Peak: -6.02 dBFS"));
         assert!(full.contains("RMS: -9.03 dBFS"));
         assert!(!summary.contains("Levels"));
+    }
+
+    #[test]
+    fn parses_eq_commands() {
+        let peak = Cli::try_parse_from([
+            "wavlab", "eq-peak", "in.wav", "1000", "-6", "1.5", "out.wav",
+        ])
+        .expect("valid peak EQ command");
+        assert!(matches!(
+            peak.command,
+            Command::EqPeak {
+                input,
+                frequency,
+                gain_db,
+                bandwidth,
+                output: Some(output),
+            } if input == Path::new("in.wav")
+                && frequency == 1_000.0
+                && gain_db == -6.0
+                && bandwidth == 1.5
+                && output == Path::new("out.wav")
+        ));
+
+        let low_shelf =
+            Cli::try_parse_from(["wavlab", "eq-lowshelf", "in.wav", "200", "4.5", "0.7"])
+                .expect("valid low-shelf EQ command");
+        assert!(matches!(
+            low_shelf.command,
+            Command::EqLowShelf {
+                input,
+                frequency,
+                gain_db,
+                q,
+                output: None,
+            } if input == Path::new("in.wav")
+                && frequency == 200.0
+                && gain_db == 4.5
+                && q == 0.7
+        ));
+
+        let high_shelf = Cli::try_parse_from([
+            "wavlab",
+            "eq-highshelf",
+            "in.wav",
+            "8000",
+            "-3",
+            "1",
+            "out.wav",
+        ])
+        .expect("valid high-shelf EQ command");
+        assert!(matches!(
+            high_shelf.command,
+            Command::EqHighShelf {
+                input,
+                frequency,
+                gain_db,
+                q,
+                output: Some(output),
+            } if input == Path::new("in.wav")
+                && frequency == 8_000.0
+                && gain_db == -3.0
+                && q == 1.0
+                && output == Path::new("out.wav")
+        ));
+
+        let all_pass = Cli::try_parse_from(["wavlab", "eq-allpass", "in.wav", "1000", "1"])
+            .expect("valid all-pass EQ command");
+        assert!(matches!(
+            all_pass.command,
+            Command::EqAllPass {
+                input,
+                frequency,
+                bandwidth,
+                output: None,
+            } if input == Path::new("in.wav")
+                && frequency == 1_000.0
+                && bandwidth == 1.0
+        ));
+
+        let band_pass =
+            Cli::try_parse_from(["wavlab", "eq-bandpass", "in.wav", "1000", "1", "out.wav"])
+                .expect("valid band-pass EQ command");
+        assert!(matches!(
+            band_pass.command,
+            Command::EqBandPass {
+                input,
+                frequency,
+                bandwidth,
+                output: Some(output),
+            } if input == Path::new("in.wav")
+                && frequency == 1_000.0
+                && bandwidth == 1.0
+                && output == Path::new("out.wav")
+        ));
+
+        let low_pass = Cli::try_parse_from(["wavlab", "eq-lowpass", "in.wav", "500", "0.75"])
+            .expect("valid low-pass EQ command");
+        assert!(matches!(
+            low_pass.command,
+            Command::EqLowPass {
+                input,
+                frequency,
+                q,
+                output: None,
+            } if input == Path::new("in.wav")
+                && frequency == 500.0
+                && q == 0.75
+        ));
+
+        let high_pass =
+            Cli::try_parse_from(["wavlab", "eq-highpass", "in.wav", "80", "0.75", "out.wav"])
+                .expect("valid high-pass EQ command");
+        assert!(matches!(
+            high_pass.command,
+            Command::EqHighPass {
+                input,
+                frequency,
+                q,
+                output: Some(output),
+            } if input == Path::new("in.wav")
+                && frequency == 80.0
+                && q == 0.75
+                && output == Path::new("out.wav")
+        ));
     }
 
     #[test]
@@ -559,6 +771,113 @@ mod tests {
 
         let original = WavFile::open(input).expect("open original input");
         assert_samples_approximately_eq(original.samples().unwrap(), &[0.025, -0.05]);
+    }
+
+    #[test]
+    fn eq_commands_write_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("eq-input");
+        save_file(&input, 2, vec![0.1, -0.05, 0.025, 0.0, -0.075, 0.05]);
+
+        let peak_output = files.path("eq-peak-output");
+        assert_processing_command_matches(
+            &input,
+            &peak_output,
+            Command::EqPeak {
+                input: input.clone(),
+                frequency: 1_000.0,
+                gain_db: 6.0,
+                bandwidth: 1.0,
+                output: Some(peak_output.clone()),
+            },
+            |wav_file| wav_file.apply_peak_eq(1_000.0, 1.0, 6.0),
+        );
+
+        let low_shelf_output = files.path("eq-lowshelf-output");
+        assert_processing_command_matches(
+            &input,
+            &low_shelf_output,
+            Command::EqLowShelf {
+                input: input.clone(),
+                frequency: 200.0,
+                gain_db: -3.0,
+                q: 1.0,
+                output: Some(low_shelf_output.clone()),
+            },
+            |wav_file| wav_file.apply_low_shelf_eq(200.0, 1.0, -3.0),
+        );
+
+        let high_shelf_output = files.path("eq-highshelf-output");
+        assert_processing_command_matches(
+            &input,
+            &high_shelf_output,
+            Command::EqHighShelf {
+                input: input.clone(),
+                frequency: 8_000.0,
+                gain_db: 3.0,
+                q: 1.0,
+                output: Some(high_shelf_output.clone()),
+            },
+            |wav_file| wav_file.apply_high_shelf_eq(8_000.0, 1.0, 3.0),
+        );
+
+        let all_pass_output = files.path("eq-allpass-output");
+        assert_processing_command_matches(
+            &input,
+            &all_pass_output,
+            Command::EqAllPass {
+                input: input.clone(),
+                frequency: 1_000.0,
+                bandwidth: 1.0,
+                output: Some(all_pass_output.clone()),
+            },
+            |wav_file| wav_file.apply_all_pass_eq(1_000.0, 1.0),
+        );
+
+        let band_pass_output = files.path("eq-bandpass-output");
+        assert_processing_command_matches(
+            &input,
+            &band_pass_output,
+            Command::EqBandPass {
+                input: input.clone(),
+                frequency: 1_000.0,
+                bandwidth: 1.0,
+                output: Some(band_pass_output.clone()),
+            },
+            |wav_file| wav_file.apply_band_pass_eq(1_000.0, 1.0),
+        );
+
+        let low_pass_output = files.path("eq-lowpass-output");
+        assert_processing_command_matches(
+            &input,
+            &low_pass_output,
+            Command::EqLowPass {
+                input: input.clone(),
+                frequency: 1_000.0,
+                q: 0.75,
+                output: Some(low_pass_output.clone()),
+            },
+            |wav_file| wav_file.apply_low_pass_eq(1_000.0, 0.75),
+        );
+
+        let high_pass_output = files.path("eq-highpass-output");
+        assert_processing_command_matches(
+            &input,
+            &high_pass_output,
+            Command::EqHighPass {
+                input: input.clone(),
+                frequency: 100.0,
+                q: 0.75,
+                output: Some(high_pass_output.clone()),
+            },
+            |wav_file| wav_file.apply_high_pass_eq(100.0, 0.75),
+        );
+
+        let original = WavFile::open(input).expect("open original EQ input");
+        assert_samples_approximately_eq(
+            original.samples().unwrap(),
+            &[0.1, -0.05, 0.025, 0.0, -0.075, 0.05],
+        );
     }
 
     #[test]

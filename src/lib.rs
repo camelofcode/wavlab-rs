@@ -29,7 +29,9 @@ pub mod cli;
 
 /// Mathematical constants used by audio-processing operations.
 pub mod constants;
+mod eq;
 mod tools;
 mod wav_file;
 
+pub use eq::Eq;
 pub use wav_file::{WavError, WavFile};
