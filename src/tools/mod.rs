@@ -1,4 +1,5 @@
 mod combine;
+mod delay;
 mod error;
 mod flip_phase;
 mod gain;
@@ -9,5 +10,6 @@ mod reverse;
 mod split;
 mod swap_channels;
 
+pub use delay::{Delay, DelayError};
 pub use error::ProcessingError;
 pub use lfo::Lfo;
