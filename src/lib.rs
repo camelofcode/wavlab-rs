@@ -36,5 +36,5 @@ mod wav_file;
 
 pub use eq::Eq;
 pub use generators::GeneratorError;
-pub use tools::ProcessingError;
+pub use tools::{Lfo, ProcessingError};
 pub use wav_file::{WavError, WavFile};
