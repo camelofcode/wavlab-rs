@@ -17,6 +17,137 @@ pub struct Cli {
 /// An operation supported by the `wavlab` executable.
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Generate a mono sine-wave WAV file.
+    SineWave {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Frequency in Hz.
+        frequency: f64,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+    },
+
+    /// Generate a mono square-wave WAV file directly.
+    SquareWave {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Frequency in Hz.
+        frequency: f64,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+    },
+
+    /// Generate a mono square-wave WAV file by additive synthesis.
+    SquareWaveAdditive {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Fundamental frequency in Hz.
+        frequency: f64,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+        /// Maximum odd harmonics to sum; frequencies at or above Nyquist are omitted.
+        #[arg(default_value_t = 1_000)]
+        harmonics: u32,
+    },
+
+    /// Generate a mono triangle-wave WAV file directly.
+    TriangleWave {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Frequency in Hz.
+        frequency: f64,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+    },
+
+    /// Generate a mono triangle-wave WAV file by additive synthesis.
+    TriangleWaveAdditive {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Fundamental frequency in Hz.
+        frequency: f64,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+        /// Maximum odd harmonics to sum; frequencies at or above Nyquist are omitted.
+        #[arg(default_value_t = 1_000)]
+        harmonics: u32,
+    },
+
+    /// Generate a mono sawtooth-wave WAV file directly.
+    SawtoothWave {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Frequency in Hz.
+        frequency: f64,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+    },
+
+    /// Generate a mono sawtooth-wave WAV file by additive synthesis.
+    SawtoothWaveAdditive {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Fundamental frequency in Hz.
+        frequency: f64,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+        /// Maximum harmonics to sum; frequencies at or above Nyquist are omitted.
+        #[arg(default_value_t = 1_000)]
+        harmonics: u32,
+    },
+
+    /// Generate a mono white-noise WAV file.
+    WhiteNoise {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+    },
+
+    /// Generate a mono pink-noise WAV file.
+    PinkNoise {
+        /// Destination WAV file.
+        output: PathBuf,
+        /// Output sample rate in Hz.
+        sample_rate: u32,
+        /// Output integer PCM bit depth: 8, 16, 24, or 32.
+        bit_depth: u16,
+        /// Output length in milliseconds.
+        length_ms: u32,
+    },
+
     /// Load and display a WAV file's metadata.
     Metadata {
         /// WAV file to inspect.
@@ -335,13 +466,14 @@ fn render_command(markdown: &mut String, command: clap::Command, invocation: &st
         .write_long_help(&mut help)
         .expect("writing Clap help to memory cannot fail");
     let help = String::from_utf8(help).expect("Clap help is valid UTF-8");
+    let help = help
+        .lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n");
 
-    write!(
-        markdown,
-        "\n## `{invocation}`\n\n```text\n{}\n```\n",
-        help.trim_end()
-    )
-    .expect("writing Markdown to a string cannot fail");
+    write!(markdown, "\n## `{invocation}`\n\n```text\n{}\n```\n", help)
+        .expect("writing Markdown to a string cannot fail");
 
     for subcommand in subcommands {
         let subcommand_invocation = format!("{invocation} {}", subcommand.get_name());

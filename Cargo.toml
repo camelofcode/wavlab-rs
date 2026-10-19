@@ -6,3 +6,4 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 clap = { version = "4.5.50", features = ["derive"] }
+rand = "0.10.3"

@@ -17,6 +17,88 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> Result<(), WavError> {
     match cli.command {
+        Command::SineWave {
+            output,
+            frequency,
+            sample_rate,
+            bit_depth,
+            length_ms,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_sine_wave(length_ms, frequency)
+        })?,
+        Command::SquareWave {
+            output,
+            frequency,
+            sample_rate,
+            bit_depth,
+            length_ms,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_square_wave_pure(length_ms, frequency)
+        })?,
+        Command::SquareWaveAdditive {
+            output,
+            frequency,
+            sample_rate,
+            bit_depth,
+            length_ms,
+            harmonics,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_square_wave_additive(length_ms, frequency, harmonics)
+        })?,
+        Command::TriangleWave {
+            output,
+            frequency,
+            sample_rate,
+            bit_depth,
+            length_ms,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_triangle_wave_pure(length_ms, frequency)
+        })?,
+        Command::TriangleWaveAdditive {
+            output,
+            frequency,
+            sample_rate,
+            bit_depth,
+            length_ms,
+            harmonics,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_triangle_wave_additive(length_ms, frequency, harmonics)
+        })?,
+        Command::SawtoothWave {
+            output,
+            frequency,
+            sample_rate,
+            bit_depth,
+            length_ms,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_sawtooth_wave_pure(length_ms, frequency)
+        })?,
+        Command::SawtoothWaveAdditive {
+            output,
+            frequency,
+            sample_rate,
+            bit_depth,
+            length_ms,
+            harmonics,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_sawtooth_wave_additive(length_ms, frequency, harmonics)
+        })?,
+        Command::WhiteNoise {
+            output,
+            sample_rate,
+            bit_depth,
+            length_ms,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_white_noise(length_ms)
+        })?,
+        Command::PinkNoise {
+            output,
+            sample_rate,
+            bit_depth,
+            length_ms,
+        } => generate_file(output, sample_rate, bit_depth, |wav_file| {
+            wav_file.generate_pink_noise(length_ms)
+        })?,
         Command::Metadata { file, full } => {
             let wav_file = if full {
                 WavFile::open(file)?
@@ -201,6 +283,17 @@ fn run(cli: Cli) -> Result<(), WavError> {
     }
 
     Ok(())
+}
+
+fn generate_file(
+    output: PathBuf,
+    sample_rate: u32,
+    bit_depth: u16,
+    generate: impl FnOnce(&mut WavFile) -> Result<(), WavError>,
+) -> Result<(), WavError> {
+    let mut wav_file = WavFile::new(1, sample_rate, bit_depth)?;
+    generate(&mut wav_file)?;
+    wav_file.save(output)
 }
 
 fn process_file(
@@ -1120,5 +1213,66 @@ mod tests {
 
         let joined = WavFile::open(join_output).expect("open joined output");
         assert_samples_approximately_eq(joined.samples().unwrap(), &[0.5, 0.25, 0.5]);
+    }
+
+    #[test]
+    fn generator_commands_write_mono_files_in_the_requested_format() {
+        let mut files = TestFiles::new();
+        let mut commands = Vec::new();
+
+        macro_rules! add_tonal_command {
+            ($name:literal, $variant:ident $(, $harmonics:expr)?) => {{
+                let output = files.path($name);
+                commands.push((
+                    output.clone(),
+                    Command::$variant {
+                        output,
+                        frequency: 1_000.0,
+                        sample_rate: 8_000,
+                        bit_depth: 16,
+                        length_ms: 1,
+                        $(harmonics: $harmonics,)?
+                    },
+                ));
+            }};
+        }
+
+        add_tonal_command!("sine", SineWave);
+        add_tonal_command!("square", SquareWave);
+        add_tonal_command!("square-additive", SquareWaveAdditive, 2);
+        add_tonal_command!("triangle", TriangleWave);
+        add_tonal_command!("triangle-additive", TriangleWaveAdditive, 2);
+        add_tonal_command!("sawtooth", SawtoothWave);
+        add_tonal_command!("sawtooth-additive", SawtoothWaveAdditive, 2);
+
+        let white_output = files.path("white-noise");
+        commands.push((
+            white_output.clone(),
+            Command::WhiteNoise {
+                output: white_output,
+                sample_rate: 8_000,
+                bit_depth: 16,
+                length_ms: 1,
+            },
+        ));
+        let pink_output = files.path("pink-noise");
+        commands.push((
+            pink_output.clone(),
+            Command::PinkNoise {
+                output: pink_output,
+                sample_rate: 8_000,
+                bit_depth: 16,
+                length_ms: 1,
+            },
+        ));
+
+        for (output, command) in commands {
+            run(Cli { command }).expect("run generator command");
+            let generated = WavFile::open(output).expect("open generated output");
+            assert_eq!(generated.number_of_channels(), 1);
+            assert_eq!(generated.sample_rate(), 8_000);
+            assert_eq!(generated.bits_per_sample(), 16);
+            assert_eq!(generated.number_of_samples(), 8);
+        }
     }
 }

@@ -30,6 +30,7 @@ pub mod cli;
 /// Mathematical constants used by audio-processing operations.
 pub mod constants;
 mod eq;
+mod generators;
 mod tools;
 mod wav_file;
 

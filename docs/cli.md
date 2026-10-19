@@ -13,29 +13,38 @@ Inspect and process PCM WAV files
 Usage: wavlab <COMMAND>
 
 Commands:
-  metadata              Load and display a WAV file's metadata
-  normalize             Normalize the peak level to 0 dBFS
-  normalize-db          Normalize the peak to a specified level in dBFS
-  gain                  Multiply every sample by a linear gain factor
-  gain-db               Apply an amplitude gain measured in decibels
-  eq-peak               Apply a peaking EQ boost or cut around a center frequency
-  eq-lowshelf           Apply a low-shelf EQ boost or cut
-  eq-highshelf          Apply a high-shelf EQ boost or cut
-  eq-allpass            Apply an all-pass filter that changes phase while preserving magnitude
-  eq-bandpass           Apply a constant-skirt-gain band-pass filter
-  eq-lowpass            Apply a 12 dB-per-octave low-pass filter
-  eq-highpass           Apply a 12 dB-per-octave high-pass filter
-  reverse               Reverse the audio while preserving the channel order in each frame
-  flip-phase            Invert the polarity of every sample
-  swap-channels         Swap the left and right channels of a stereo file
-  split-stereo          Split a stereo WAV file into separate mono left and right files
-  split-mid-side        Split a stereo WAV file into separate mono mid and side files
-  split                 Split a WAV file at one or more millisecond positions
-  left-right-to-stereo  Combine separate mono left and right WAV files into stereo
-  mid-side-to-stereo    Decode separate mono mid and side WAV files into stereo
-  mix                   Mix two or more WAV files starting at the first frame
-  join                  Join two or more compatible WAV files end-to-end
-  help                  Print this message or the help of the given subcommand(s)
+  sine-wave               Generate a mono sine-wave WAV file
+  square-wave             Generate a mono square-wave WAV file directly
+  square-wave-additive    Generate a mono square-wave WAV file by additive synthesis
+  triangle-wave           Generate a mono triangle-wave WAV file directly
+  triangle-wave-additive  Generate a mono triangle-wave WAV file by additive synthesis
+  sawtooth-wave           Generate a mono sawtooth-wave WAV file directly
+  sawtooth-wave-additive  Generate a mono sawtooth-wave WAV file by additive synthesis
+  white-noise             Generate a mono white-noise WAV file
+  pink-noise              Generate a mono pink-noise WAV file
+  metadata                Load and display a WAV file's metadata
+  normalize               Normalize the peak level to 0 dBFS
+  normalize-db            Normalize the peak to a specified level in dBFS
+  gain                    Multiply every sample by a linear gain factor
+  gain-db                 Apply an amplitude gain measured in decibels
+  eq-peak                 Apply a peaking EQ boost or cut around a center frequency
+  eq-lowshelf             Apply a low-shelf EQ boost or cut
+  eq-highshelf            Apply a high-shelf EQ boost or cut
+  eq-allpass              Apply an all-pass filter that changes phase while preserving magnitude
+  eq-bandpass             Apply a constant-skirt-gain band-pass filter
+  eq-lowpass              Apply a 12 dB-per-octave low-pass filter
+  eq-highpass             Apply a 12 dB-per-octave high-pass filter
+  reverse                 Reverse the audio while preserving the channel order in each frame
+  flip-phase              Invert the polarity of every sample
+  swap-channels           Swap the left and right channels of a stereo file
+  split-stereo            Split a stereo WAV file into separate mono left and right files
+  split-mid-side          Split a stereo WAV file into separate mono mid and side files
+  split                   Split a WAV file at one or more millisecond positions
+  left-right-to-stereo    Combine separate mono left and right WAV files into stereo
+  mid-side-to-stereo      Decode separate mono mid and side WAV files into stereo
+  mix                     Mix two or more WAV files starting at the first frame
+  join                    Join two or more compatible WAV files end-to-end
+  help                    Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help
@@ -43,6 +52,267 @@ Options:
 
   -V, --version
           Print version
+```
+
+## `wavlab sine-wave`
+
+```text
+Generate a mono sine-wave WAV file
+
+Usage: wavlab sine-wave <OUTPUT> <FREQUENCY> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS>
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <FREQUENCY>
+          Frequency in Hz
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab square-wave`
+
+```text
+Generate a mono square-wave WAV file directly
+
+Usage: wavlab square-wave <OUTPUT> <FREQUENCY> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS>
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <FREQUENCY>
+          Frequency in Hz
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab square-wave-additive`
+
+```text
+Generate a mono square-wave WAV file by additive synthesis
+
+Usage: wavlab square-wave-additive <OUTPUT> <FREQUENCY> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS> [HARMONICS]
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <FREQUENCY>
+          Fundamental frequency in Hz
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+  [HARMONICS]
+          Maximum odd harmonics to sum; frequencies at or above Nyquist are omitted
+
+          [default: 1000]
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab triangle-wave`
+
+```text
+Generate a mono triangle-wave WAV file directly
+
+Usage: wavlab triangle-wave <OUTPUT> <FREQUENCY> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS>
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <FREQUENCY>
+          Frequency in Hz
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab triangle-wave-additive`
+
+```text
+Generate a mono triangle-wave WAV file by additive synthesis
+
+Usage: wavlab triangle-wave-additive <OUTPUT> <FREQUENCY> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS> [HARMONICS]
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <FREQUENCY>
+          Fundamental frequency in Hz
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+  [HARMONICS]
+          Maximum odd harmonics to sum; frequencies at or above Nyquist are omitted
+
+          [default: 1000]
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab sawtooth-wave`
+
+```text
+Generate a mono sawtooth-wave WAV file directly
+
+Usage: wavlab sawtooth-wave <OUTPUT> <FREQUENCY> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS>
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <FREQUENCY>
+          Frequency in Hz
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab sawtooth-wave-additive`
+
+```text
+Generate a mono sawtooth-wave WAV file by additive synthesis
+
+Usage: wavlab sawtooth-wave-additive <OUTPUT> <FREQUENCY> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS> [HARMONICS]
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <FREQUENCY>
+          Fundamental frequency in Hz
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+  [HARMONICS]
+          Maximum harmonics to sum; frequencies at or above Nyquist are omitted
+
+          [default: 1000]
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab white-noise`
+
+```text
+Generate a mono white-noise WAV file
+
+Usage: wavlab white-noise <OUTPUT> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS>
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab pink-noise`
+
+```text
+Generate a mono pink-noise WAV file
+
+Usage: wavlab pink-noise <OUTPUT> <SAMPLE_RATE> <BIT_DEPTH> <LENGTH_MS>
+
+Arguments:
+  <OUTPUT>
+          Destination WAV file
+
+  <SAMPLE_RATE>
+          Output sample rate in Hz
+
+  <BIT_DEPTH>
+          Output integer PCM bit depth: 8, 16, 24, or 32
+
+  <LENGTH_MS>
+          Output length in milliseconds
+
+Options:
+  -h, --help
+          Print help
 ```
 
 ## `wavlab metadata`

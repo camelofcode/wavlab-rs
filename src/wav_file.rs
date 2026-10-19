@@ -101,6 +101,10 @@ pub enum WavError {
     },
     /// A sample rate of zero was requested or encountered.
     InvalidSampleRate(u32),
+    /// A generated waveform frequency is outside the usable sampled range.
+    InvalidFrequency(f64),
+    /// An additive generator was asked to use no harmonics.
+    InvalidHarmonicCount(u32),
     /// The requested or stored integer PCM bit depth is unsupported.
     UnsupportedBitsPerSample(u16),
     /// The WAV byte rate cannot be represented by the file format.
@@ -312,6 +316,14 @@ impl Display for WavError {
                     "invalid sample rate {sample_rate}; it must be greater than zero"
                 )
             }
+            Self::InvalidFrequency(frequency) => write!(
+                formatter,
+                "invalid frequency {frequency}; it must be finite, greater than zero, and below the Nyquist frequency"
+            ),
+            Self::InvalidHarmonicCount(harmonics) => write!(
+                formatter,
+                "invalid harmonic count {harmonics}; it must be greater than zero"
+            ),
             Self::UnsupportedBitsPerSample(bits) => write!(
                 formatter,
                 "unsupported PCM bit depth {bits}; expected 8, 16, 24, or 32 bits"

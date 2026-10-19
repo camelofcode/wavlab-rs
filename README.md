@@ -91,6 +91,9 @@ not represent bundled third-party source code.
 - MusicDSP.org, “[C++ class implementation of RBJ
   Filters](https://www.musicdsp.org/en/latest/Filters/128-c-class-implementation-of-rbj-filters.html),”
   13 December 2002.
+- Robin Whittle, “[DSP generation of Pink (1/f)
+  Noise](https://www.firstpr.com.au/dsp/pink-noise/),” including Paul Kellet's
+  pinking-filter coefficients, 18 October 1999.
 
 ## License
 
