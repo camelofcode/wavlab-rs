@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::Parser;
-use wavlab::cli::{Cli, Command};
-use wavlab::{GeneratorError, WavError, WavFile};
+use wavlab::cli::{Cli, Command, MonoDelayArgs, StereoDelayArgs};
+use wavlab::{DelayChannelSettings, EffectError, GeneratorError, WavError, WavFile};
 
 type CliResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -134,6 +134,134 @@ fn run(cli: Cli) -> CliResult<()> {
             output,
         } => {
             process_file(input, output, |wav_file| wav_file.apply_gain_db(gain_db))?;
+        }
+        Command::Saturate {
+            input,
+            drive_db,
+            output,
+        } => {
+            process_file(input, output, |wav_file| wav_file.tape_saturation(drive_db))?;
+        }
+        Command::DigitalDelayMono(delay) => {
+            let MonoDelayArgs {
+                input,
+                delay_ms,
+                feedback,
+                mix,
+                output,
+                tail_ms,
+            } = delay;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.digital_delay(DelayChannelSettings::new(delay_ms, feedback), mix, tail_ms)
+            })?;
+        }
+        Command::DigitalDelayStereo(delay) => {
+            let StereoDelayArgs {
+                input,
+                left_delay_ms,
+                left_feedback,
+                right_delay_ms,
+                right_feedback,
+                mix,
+                output,
+                tail_ms,
+            } = delay;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.digital_delay_stereo(
+                    DelayChannelSettings::new(left_delay_ms, left_feedback),
+                    DelayChannelSettings::new(right_delay_ms, right_feedback),
+                    mix,
+                    tail_ms,
+                )
+            })?;
+        }
+        Command::AnalogDelayMono { delay, cutoff_hz } => {
+            let MonoDelayArgs {
+                input,
+                delay_ms,
+                feedback,
+                mix,
+                output,
+                tail_ms,
+            } = delay;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.analog_delay_with_cutoff(
+                    DelayChannelSettings::new(delay_ms, feedback),
+                    mix,
+                    cutoff_hz,
+                    tail_ms,
+                )
+            })?;
+        }
+        Command::AnalogDelayStereo { delay, cutoff_hz } => {
+            let StereoDelayArgs {
+                input,
+                left_delay_ms,
+                left_feedback,
+                right_delay_ms,
+                right_feedback,
+                mix,
+                output,
+                tail_ms,
+            } = delay;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.analog_delay_stereo_with_cutoff(
+                    DelayChannelSettings::new(left_delay_ms, left_feedback),
+                    DelayChannelSettings::new(right_delay_ms, right_feedback),
+                    mix,
+                    cutoff_hz,
+                    tail_ms,
+                )
+            })?;
+        }
+        Command::TapeDelayMono {
+            delay,
+            drive_db,
+            cutoff_hz,
+        } => {
+            let MonoDelayArgs {
+                input,
+                delay_ms,
+                feedback,
+                mix,
+                output,
+                tail_ms,
+            } = delay;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.tape_delay_with_cutoff(
+                    DelayChannelSettings::new(delay_ms, feedback),
+                    mix,
+                    cutoff_hz,
+                    drive_db,
+                    tail_ms,
+                )
+            })?;
+        }
+        Command::TapeDelayStereo {
+            delay,
+            drive_db,
+            cutoff_hz,
+        } => {
+            let StereoDelayArgs {
+                input,
+                left_delay_ms,
+                left_feedback,
+                right_delay_ms,
+                right_feedback,
+                mix,
+                output,
+                tail_ms,
+            } = delay;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.tape_delay_stereo_with_cutoff(
+                    DelayChannelSettings::new(left_delay_ms, left_feedback),
+                    DelayChannelSettings::new(right_delay_ms, right_feedback),
+                    mix,
+                    cutoff_hz,
+                    drive_db,
+                    tail_ms,
+                )
+            })?;
         }
         Command::EqPeak {
             input,
@@ -310,6 +438,18 @@ fn process_file(
     wav_file.save(output)
 }
 
+fn process_effect_file(
+    input: PathBuf,
+    output: Option<PathBuf>,
+    process: impl FnOnce(&mut WavFile) -> Result<(), EffectError>,
+) -> CliResult<()> {
+    let output = output.unwrap_or_else(|| input.clone());
+    let mut wav_file = WavFile::open(input)?;
+    process(&mut wav_file)?;
+    wav_file.save(output)?;
+    Ok(())
+}
+
 fn open_files(paths: Vec<PathBuf>) -> Result<Vec<WavFile>, WavError> {
     paths.into_iter().map(WavFile::open).collect()
 }
@@ -363,9 +503,9 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use clap::{CommandFactory, Parser};
-    use wavlab::{WavError, WavFile, constants::MINUS_THREE_DB};
+    use wavlab::{DelayChannelSettings, EffectError, WavError, WavFile, constants::MINUS_THREE_DB};
 
-    use super::{Cli, Command, run};
+    use super::{Cli, Command, MonoDelayArgs, StereoDelayArgs, run};
 
     static NEXT_TEST_FILE: AtomicU64 = AtomicU64::new(0);
 
@@ -434,6 +574,22 @@ mod tests {
         run(Cli { command }).expect("run processing command");
 
         let actual = WavFile::open(output).expect("open command output");
+        assert_samples_approximately_eq(actual.samples().unwrap(), expected.samples().unwrap());
+    }
+
+    fn assert_effect_command_matches(
+        input: &Path,
+        output: &Path,
+        command: Command,
+        process: impl FnOnce(&mut WavFile) -> Result<(), EffectError>,
+    ) {
+        let mut expected = WavFile::open(input).expect("open expected input");
+        process(&mut expected).expect("process expected samples");
+
+        run(Cli { command }).expect("run effect command");
+
+        let actual = WavFile::open(output).expect("open command output");
+        assert_eq!(actual.number_of_channels(), expected.number_of_channels());
         assert_samples_approximately_eq(actual.samples().unwrap(), expected.samples().unwrap());
     }
 
@@ -645,6 +801,16 @@ mod tests {
                 if input == Path::new("in.wav") && gain_db == -3.0
         ));
 
+        let saturate = Cli::try_parse_from(["wavlab", "saturate", "in.wav", "-0.25", "out.wav"])
+            .expect("valid saturate command");
+        assert!(matches!(
+            saturate.command,
+            Command::Saturate { input, drive_db, output: Some(output) }
+                if input == Path::new("in.wav")
+                    && drive_db == -0.25
+                    && output == Path::new("out.wav")
+        ));
+
         let reverse = Cli::try_parse_from(["wavlab", "reverse", "in.wav", "out.wav"])
             .expect("valid reverse command");
         assert!(matches!(
@@ -805,6 +971,140 @@ mod tests {
     }
 
     #[test]
+    fn parses_delay_commands() {
+        let digital_mono = Cli::try_parse_from([
+            "wavlab",
+            "digital-delay-mono",
+            "in.wav",
+            "250",
+            "0.4",
+            "0.5",
+            "out.wav",
+            "--tail-ms",
+            "1000",
+        ])
+        .expect("valid mono digital delay");
+        assert!(matches!(
+            digital_mono.command,
+            Command::DigitalDelayMono(MonoDelayArgs {
+                input,
+                delay_ms: 250,
+                feedback: 0.4,
+                mix: 0.5,
+                output: Some(output),
+                tail_ms: 1000,
+            }) if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+
+        let digital_stereo = Cli::try_parse_from([
+            "wavlab",
+            "digital-delay-stereo",
+            "in.wav",
+            "200",
+            "0.3",
+            "350",
+            "0.4",
+            "0.5",
+        ])
+        .expect("valid stereo digital delay");
+        assert!(matches!(
+            digital_stereo.command,
+            Command::DigitalDelayStereo(StereoDelayArgs {
+                input,
+                left_delay_ms: 200,
+                left_feedback: 0.3,
+                right_delay_ms: 350,
+                right_feedback: 0.4,
+                mix: 0.5,
+                output: None,
+                tail_ms: 0,
+            }) if input == Path::new("in.wav")
+        ));
+
+        let analog_mono = Cli::try_parse_from([
+            "wavlab",
+            "analog-delay-mono",
+            "in.wav",
+            "250",
+            "0.4",
+            "0.5",
+            "--cutoff-hz",
+            "3000",
+        ])
+        .expect("valid mono analog delay");
+        assert!(matches!(
+            analog_mono.command,
+            Command::AnalogDelayMono {
+                delay: MonoDelayArgs { delay_ms: 250, .. },
+                cutoff_hz: 3_000.0,
+            }
+        ));
+
+        let analog_stereo = Cli::try_parse_from([
+            "wavlab",
+            "analog-delay-stereo",
+            "in.wav",
+            "200",
+            "0.3",
+            "350",
+            "0.4",
+            "0.5",
+        ])
+        .expect("valid stereo analog delay");
+        assert!(matches!(
+            analog_stereo.command,
+            Command::AnalogDelayStereo {
+                cutoff_hz: 2_000.0,
+                ..
+            }
+        ));
+
+        let tape_mono = Cli::try_parse_from([
+            "wavlab",
+            "tape-delay-mono",
+            "in.wav",
+            "250",
+            "0.4",
+            "0.5",
+            "--drive-db",
+            "6",
+        ])
+        .expect("valid mono tape delay");
+        assert!(matches!(
+            tape_mono.command,
+            Command::TapeDelayMono {
+                drive_db: 6.0,
+                cutoff_hz: 2_000.0,
+                ..
+            }
+        ));
+
+        let tape_stereo = Cli::try_parse_from([
+            "wavlab",
+            "tape-delay-stereo",
+            "in.wav",
+            "200",
+            "0.3",
+            "350",
+            "0.4",
+            "0.5",
+            "--drive-db",
+            "-3",
+            "--cutoff-hz",
+            "1500",
+        ])
+        .expect("valid stereo tape delay");
+        assert!(matches!(
+            tape_stereo.command,
+            Command::TapeDelayStereo {
+                drive_db: -3.0,
+                cutoff_hz: 1_500.0,
+                ..
+            }
+        ));
+    }
+
+    #[test]
     fn normalize_overwrites_input_when_output_is_omitted() {
         let mut files = TestFiles::new();
         let input = files.path("normalize-input");
@@ -829,6 +1129,7 @@ mod tests {
         let normalize_db_output = files.path("normalize-db-output");
         let gain_output = files.path("gain-output");
         let gain_db_output = files.path("gain-db-output");
+        let saturation_output = files.path("saturation-output");
         save_mono_file(&input, vec![0.025, -0.05]);
 
         run(Cli {
@@ -855,6 +1156,16 @@ mod tests {
             },
         })
         .expect("apply dB gain to output");
+        assert_processing_command_matches(
+            &input,
+            &saturation_output,
+            Command::Saturate {
+                input: input.clone(),
+                drive_db: 6.0,
+                output: Some(saturation_output.clone()),
+            },
+            |wav_file| wav_file.tape_saturation(6.0),
+        );
 
         let normalized = WavFile::open(normalize_db_output).expect("open normalized output");
         assert_samples_approximately_eq(normalized.samples().unwrap(), &[0.05, -0.1]);
@@ -867,6 +1178,162 @@ mod tests {
 
         let original = WavFile::open(input).expect("open original input");
         assert_samples_approximately_eq(original.samples().unwrap(), &[0.025, -0.05]);
+    }
+
+    #[test]
+    fn delay_commands_write_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("delay-input");
+        save_mono_file(&input, vec![0.5, 0.0, 0.0]);
+
+        let digital_mono_output = files.path("digital-delay-mono-output");
+        assert_effect_command_matches(
+            &input,
+            &digital_mono_output,
+            Command::DigitalDelayMono(MonoDelayArgs {
+                input: input.clone(),
+                delay_ms: 1,
+                feedback: 0.5,
+                mix: 0.5,
+                output: Some(digital_mono_output.clone()),
+                tail_ms: 2,
+            }),
+            |wav_file| wav_file.digital_delay(DelayChannelSettings::new(1, 0.5), 0.5, 2),
+        );
+
+        let digital_stereo_output = files.path("digital-delay-stereo-output");
+        assert_effect_command_matches(
+            &input,
+            &digital_stereo_output,
+            Command::DigitalDelayStereo(StereoDelayArgs {
+                input: input.clone(),
+                left_delay_ms: 1,
+                left_feedback: 0.5,
+                right_delay_ms: 2,
+                right_feedback: 0.25,
+                mix: 0.5,
+                output: Some(digital_stereo_output.clone()),
+                tail_ms: 2,
+            }),
+            |wav_file| {
+                wav_file.digital_delay_stereo(
+                    DelayChannelSettings::new(1, 0.5),
+                    DelayChannelSettings::new(2, 0.25),
+                    0.5,
+                    2,
+                )
+            },
+        );
+
+        let analog_mono_output = files.path("analog-delay-mono-output");
+        assert_effect_command_matches(
+            &input,
+            &analog_mono_output,
+            Command::AnalogDelayMono {
+                delay: MonoDelayArgs {
+                    input: input.clone(),
+                    delay_ms: 1,
+                    feedback: 0.5,
+                    mix: 0.5,
+                    output: Some(analog_mono_output.clone()),
+                    tail_ms: 2,
+                },
+                cutoff_hz: 1_500.0,
+            },
+            |wav_file| {
+                wav_file.analog_delay_with_cutoff(
+                    DelayChannelSettings::new(1, 0.5),
+                    0.5,
+                    1_500.0,
+                    2,
+                )
+            },
+        );
+
+        let analog_stereo_output = files.path("analog-delay-stereo-output");
+        assert_effect_command_matches(
+            &input,
+            &analog_stereo_output,
+            Command::AnalogDelayStereo {
+                delay: StereoDelayArgs {
+                    input: input.clone(),
+                    left_delay_ms: 1,
+                    left_feedback: 0.5,
+                    right_delay_ms: 2,
+                    right_feedback: 0.25,
+                    mix: 0.5,
+                    output: Some(analog_stereo_output.clone()),
+                    tail_ms: 2,
+                },
+                cutoff_hz: 1_500.0,
+            },
+            |wav_file| {
+                wav_file.analog_delay_stereo_with_cutoff(
+                    DelayChannelSettings::new(1, 0.5),
+                    DelayChannelSettings::new(2, 0.25),
+                    0.5,
+                    1_500.0,
+                    2,
+                )
+            },
+        );
+
+        let tape_mono_output = files.path("tape-delay-mono-output");
+        assert_effect_command_matches(
+            &input,
+            &tape_mono_output,
+            Command::TapeDelayMono {
+                delay: MonoDelayArgs {
+                    input: input.clone(),
+                    delay_ms: 1,
+                    feedback: 0.5,
+                    mix: 0.5,
+                    output: Some(tape_mono_output.clone()),
+                    tail_ms: 2,
+                },
+                drive_db: 3.0,
+                cutoff_hz: 1_500.0,
+            },
+            |wav_file| {
+                wav_file.tape_delay_with_cutoff(
+                    DelayChannelSettings::new(1, 0.5),
+                    0.5,
+                    1_500.0,
+                    3.0,
+                    2,
+                )
+            },
+        );
+
+        let tape_stereo_output = files.path("tape-delay-stereo-output");
+        assert_effect_command_matches(
+            &input,
+            &tape_stereo_output,
+            Command::TapeDelayStereo {
+                delay: StereoDelayArgs {
+                    input: input.clone(),
+                    left_delay_ms: 1,
+                    left_feedback: 0.5,
+                    right_delay_ms: 2,
+                    right_feedback: 0.25,
+                    mix: 0.5,
+                    output: Some(tape_stereo_output.clone()),
+                    tail_ms: 2,
+                },
+                drive_db: 3.0,
+                cutoff_hz: 1_500.0,
+            },
+            |wav_file| {
+                wav_file.tape_delay_stereo_with_cutoff(
+                    DelayChannelSettings::new(1, 0.5),
+                    DelayChannelSettings::new(2, 0.25),
+                    0.5,
+                    1_500.0,
+                    3.0,
+                    2,
+                )
+            },
+        );
     }
 
     #[test]

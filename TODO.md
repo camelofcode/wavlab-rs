@@ -36,26 +36,26 @@ name.
 
 ## Effects
 
-- [ ] `saturate`
-- [ ] `digital-delay-mono`
-- [ ] `digital-delay-stereo`
-- [ ] `analog-delay-mono`
-- [ ] `analog-delay-stereo`
-- [ ] `tape-delay-mono`
-- [ ] `tape-delay-stereo`
+- [x] `saturate`
+- [x] `digital-delay-mono`
+- [x] `digital-delay-stereo`
+- [x] `analog-delay-mono`
+- [x] `analog-delay-stereo`
+- [x] `tape-delay-mono`
+- [x] `tape-delay-stereo`
 - [ ] `reverb`
 
 ## Generators
 
-- [ ] `sine-wave`
-- [ ] `square-wave`
-- [ ] `square-wave-additive`
-- [ ] `triangle-wave`
-- [ ] `triangle-wave-additive`
-- [ ] `sawtooth-wave`
-- [ ] `sawtooth-wave-additive`
-- [ ] `white-noise`
-- [ ] `pink-noise`
+- [x] `sine-wave`
+- [x] `square-wave`
+- [x] `square-wave-additive`
+- [x] `triangle-wave`
+- [x] `triangle-wave-additive`
+- [x] `sawtooth-wave`
+- [x] `sawtooth-wave-additive`
+- [x] `white-noise`
+- [x] `pink-noise`
 
 The Rust CLI also provides `normalize-db`, which has no separately registered
 C++ command in `Commands.cpp`.

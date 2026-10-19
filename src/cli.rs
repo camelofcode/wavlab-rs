@@ -3,7 +3,9 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand};
+
+use crate::DEFAULT_DELAY_CUTOFF_HZ;
 
 /// The `wavlab` command-line interface.
 #[derive(Debug, Parser)]
@@ -12,6 +14,61 @@ pub struct Cli {
     /// The operation to perform.
     #[command(subcommand)]
     pub command: Command,
+}
+
+/// Arguments shared by delay commands that use one setting for every channel.
+#[derive(Debug, Args)]
+pub struct MonoDelayArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Delay time in milliseconds.
+    pub delay_ms: u32,
+
+    /// Feedback from -1 to 1.
+    #[arg(allow_hyphen_values = true)]
+    pub feedback: f64,
+
+    /// Wet proportion from 0 (dry) to 1 (wet).
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+
+    /// Additional output tail in milliseconds.
+    #[arg(long, default_value_t = 0)]
+    pub tail_ms: u32,
+}
+
+/// Arguments shared by stereo delays with independent channel settings.
+#[derive(Debug, Args)]
+pub struct StereoDelayArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Left-channel delay time in milliseconds.
+    pub left_delay_ms: u32,
+
+    /// Left-channel feedback from -1 to 1.
+    #[arg(allow_hyphen_values = true)]
+    pub left_feedback: f64,
+
+    /// Right-channel delay time in milliseconds.
+    pub right_delay_ms: u32,
+
+    /// Right-channel feedback from -1 to 1.
+    #[arg(allow_hyphen_values = true)]
+    pub right_feedback: f64,
+
+    /// Wet proportion from 0 (dry) to 1 (wet).
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+
+    /// Additional output tail in milliseconds.
+    #[arg(long, default_value_t = 0)]
+    pub tail_ms: u32,
 }
 
 /// An operation supported by the `wavlab` executable.
@@ -204,6 +261,77 @@ pub enum Command {
 
         /// Destination WAV file; defaults to overwriting the input file.
         output: Option<PathBuf>,
+    },
+
+    /// Apply sigmoid soft clipping that approximates tape saturation.
+    Saturate {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Pre-saturation input gain in dB. Positive values produce more distortion.
+        #[arg(allow_hyphen_values = true)]
+        drive_db: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+    },
+
+    /// Apply a clean delay using the same settings for every input channel.
+    DigitalDelayMono(MonoDelayArgs),
+
+    /// Apply a clean stereo delay with independent left and right settings.
+    DigitalDelayStereo(StereoDelayArgs),
+
+    /// Apply a low-pass-filtered delay using the same settings for every channel.
+    AnalogDelayMono {
+        /// Common delay and output arguments.
+        #[command(flatten)]
+        delay: MonoDelayArgs,
+
+        /// Feedback low-pass cutoff in Hz.
+        #[arg(long, default_value_t = DEFAULT_DELAY_CUTOFF_HZ)]
+        cutoff_hz: f64,
+    },
+
+    /// Apply a low-pass-filtered stereo delay with independent channel settings.
+    AnalogDelayStereo {
+        /// Stereo delay and output arguments.
+        #[command(flatten)]
+        delay: StereoDelayArgs,
+
+        /// Feedback low-pass cutoff in Hz.
+        #[arg(long, default_value_t = DEFAULT_DELAY_CUTOFF_HZ)]
+        cutoff_hz: f64,
+    },
+
+    /// Apply a saturated, low-pass-filtered delay to every input channel.
+    TapeDelayMono {
+        /// Common delay and output arguments.
+        #[command(flatten)]
+        delay: MonoDelayArgs,
+
+        /// Pre-saturation feedback gain in dB.
+        #[arg(long, default_value_t = 0.0, allow_hyphen_values = true)]
+        drive_db: f64,
+
+        /// Feedback low-pass cutoff in Hz.
+        #[arg(long, default_value_t = DEFAULT_DELAY_CUTOFF_HZ)]
+        cutoff_hz: f64,
+    },
+
+    /// Apply a saturated stereo delay with independent channel settings.
+    TapeDelayStereo {
+        /// Stereo delay and output arguments.
+        #[command(flatten)]
+        delay: StereoDelayArgs,
+
+        /// Pre-saturation feedback gain in dB.
+        #[arg(long, default_value_t = 0.0, allow_hyphen_values = true)]
+        drive_db: f64,
+
+        /// Feedback low-pass cutoff in Hz.
+        #[arg(long, default_value_t = DEFAULT_DELAY_CUTOFF_HZ)]
+        cutoff_hz: f64,
     },
 
     /// Apply a peaking EQ boost or cut around a center frequency.

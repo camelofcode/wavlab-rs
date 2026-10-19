@@ -94,6 +94,9 @@ not represent bundled third-party source code.
 - Robin Whittle, “[DSP generation of Pink (1/f)
   Noise](https://www.firstpr.com.au/dsp/pink-noise/),” including Paul Kellet's
   pinking-filter coefficients, 18 October 1999.
+- TAP-plugins, “[TAP Sigmoid
+  Booster](https://tomscii.sig7.se/tap-plugins/ladspa/sigmoid.html),” describing
+  the nonlinear transfer curve used for tape-style saturation.
 
 ## License
 

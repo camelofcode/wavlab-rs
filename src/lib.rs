@@ -30,11 +30,13 @@ pub mod cli;
 /// Mathematical constants used by audio-processing operations.
 pub mod constants;
 mod eq;
+mod fx;
 mod generators;
 mod tools;
 mod wav_file;
 
 pub use eq::Eq;
+pub use fx::{DEFAULT_DELAY_CUTOFF_HZ, DelayChannelSettings, EffectError};
 pub use generators::GeneratorError;
 pub use tools::{Delay, DelayError, Lfo, ProcessingError};
 pub use wav_file::{WavError, WavFile};

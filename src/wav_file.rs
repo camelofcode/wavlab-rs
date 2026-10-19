@@ -205,6 +205,34 @@ impl WavFile {
         self.samples = Some(samples);
         Ok(())
     }
+
+    pub(crate) fn set_channels_and_samples(
+        &mut self,
+        number_of_channels: u16,
+        samples: Vec<f64>,
+    ) -> Result<(), WavError> {
+        let layout = pcm_layout(
+            number_of_channels,
+            self.sample_rate(),
+            self.bits_per_sample(),
+        )?;
+        if !samples
+            .len()
+            .is_multiple_of(usize::from(number_of_channels))
+        {
+            return Err(WavError::IncompleteSampleFrame {
+                sample_count: samples.len(),
+                number_of_channels,
+            });
+        }
+
+        self.format_chunk.number_of_channels = number_of_channels;
+        self.format_chunk.byte_rate = layout.byte_rate;
+        self.format_chunk.block_align = layout.block_align;
+        self.number_of_samples = samples.len();
+        self.samples = Some(samples);
+        Ok(())
+    }
 }
 
 fn pcm_layout(

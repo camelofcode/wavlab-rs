@@ -27,6 +27,13 @@ Commands:
   normalize-db            Normalize the peak to a specified level in dBFS
   gain                    Multiply every sample by a linear gain factor
   gain-db                 Apply an amplitude gain measured in decibels
+  saturate                Apply sigmoid soft clipping that approximates tape saturation
+  digital-delay-mono      Apply a clean delay using the same settings for every input channel
+  digital-delay-stereo    Apply a clean stereo delay with independent left and right settings
+  analog-delay-mono       Apply a low-pass-filtered delay using the same settings for every channel
+  analog-delay-stereo     Apply a low-pass-filtered stereo delay with independent channel settings
+  tape-delay-mono         Apply a saturated, low-pass-filtered delay to every input channel
+  tape-delay-stereo       Apply a saturated stereo delay with independent channel settings
   eq-peak                 Apply a peaking EQ boost or cut around a center frequency
   eq-lowshelf             Apply a low-shelf EQ boost or cut
   eq-highshelf            Apply a high-shelf EQ boost or cut
@@ -415,6 +422,274 @@ Arguments:
           Destination WAV file; defaults to overwriting the input file
 
 Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab saturate`
+
+```text
+Apply sigmoid soft clipping that approximates tape saturation
+
+Usage: wavlab saturate <INPUT> <DRIVE_DB> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DRIVE_DB>
+          Pre-saturation input gain in dB. Positive values produce more distortion
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab digital-delay-mono`
+
+```text
+Apply a clean delay using the same settings for every input channel
+
+Usage: wavlab digital-delay-mono [OPTIONS] <INPUT> <DELAY_MS> <FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DELAY_MS>
+          Delay time in milliseconds
+
+  <FEEDBACK>
+          Feedback from -1 to 1
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --tail-ms <TAIL_MS>
+          Additional output tail in milliseconds
+
+          [default: 0]
+
+  -h, --help
+          Print help
+```
+
+## `wavlab digital-delay-stereo`
+
+```text
+Apply a clean stereo delay with independent left and right settings
+
+Usage: wavlab digital-delay-stereo [OPTIONS] <INPUT> <LEFT_DELAY_MS> <LEFT_FEEDBACK> <RIGHT_DELAY_MS> <RIGHT_FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <LEFT_DELAY_MS>
+          Left-channel delay time in milliseconds
+
+  <LEFT_FEEDBACK>
+          Left-channel feedback from -1 to 1
+
+  <RIGHT_DELAY_MS>
+          Right-channel delay time in milliseconds
+
+  <RIGHT_FEEDBACK>
+          Right-channel feedback from -1 to 1
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --tail-ms <TAIL_MS>
+          Additional output tail in milliseconds
+
+          [default: 0]
+
+  -h, --help
+          Print help
+```
+
+## `wavlab analog-delay-mono`
+
+```text
+Apply a low-pass-filtered delay using the same settings for every channel
+
+Usage: wavlab analog-delay-mono [OPTIONS] <INPUT> <DELAY_MS> <FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DELAY_MS>
+          Delay time in milliseconds
+
+  <FEEDBACK>
+          Feedback from -1 to 1
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --tail-ms <TAIL_MS>
+          Additional output tail in milliseconds
+
+          [default: 0]
+
+      --cutoff-hz <CUTOFF_HZ>
+          Feedback low-pass cutoff in Hz
+
+          [default: 2000]
+
+  -h, --help
+          Print help
+```
+
+## `wavlab analog-delay-stereo`
+
+```text
+Apply a low-pass-filtered stereo delay with independent channel settings
+
+Usage: wavlab analog-delay-stereo [OPTIONS] <INPUT> <LEFT_DELAY_MS> <LEFT_FEEDBACK> <RIGHT_DELAY_MS> <RIGHT_FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <LEFT_DELAY_MS>
+          Left-channel delay time in milliseconds
+
+  <LEFT_FEEDBACK>
+          Left-channel feedback from -1 to 1
+
+  <RIGHT_DELAY_MS>
+          Right-channel delay time in milliseconds
+
+  <RIGHT_FEEDBACK>
+          Right-channel feedback from -1 to 1
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --tail-ms <TAIL_MS>
+          Additional output tail in milliseconds
+
+          [default: 0]
+
+      --cutoff-hz <CUTOFF_HZ>
+          Feedback low-pass cutoff in Hz
+
+          [default: 2000]
+
+  -h, --help
+          Print help
+```
+
+## `wavlab tape-delay-mono`
+
+```text
+Apply a saturated, low-pass-filtered delay to every input channel
+
+Usage: wavlab tape-delay-mono [OPTIONS] <INPUT> <DELAY_MS> <FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DELAY_MS>
+          Delay time in milliseconds
+
+  <FEEDBACK>
+          Feedback from -1 to 1
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --tail-ms <TAIL_MS>
+          Additional output tail in milliseconds
+
+          [default: 0]
+
+      --drive-db <DRIVE_DB>
+          Pre-saturation feedback gain in dB
+
+          [default: 0]
+
+      --cutoff-hz <CUTOFF_HZ>
+          Feedback low-pass cutoff in Hz
+
+          [default: 2000]
+
+  -h, --help
+          Print help
+```
+
+## `wavlab tape-delay-stereo`
+
+```text
+Apply a saturated stereo delay with independent channel settings
+
+Usage: wavlab tape-delay-stereo [OPTIONS] <INPUT> <LEFT_DELAY_MS> <LEFT_FEEDBACK> <RIGHT_DELAY_MS> <RIGHT_FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <LEFT_DELAY_MS>
+          Left-channel delay time in milliseconds
+
+  <LEFT_FEEDBACK>
+          Left-channel feedback from -1 to 1
+
+  <RIGHT_DELAY_MS>
+          Right-channel delay time in milliseconds
+
+  <RIGHT_FEEDBACK>
+          Right-channel feedback from -1 to 1
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --tail-ms <TAIL_MS>
+          Additional output tail in milliseconds
+
+          [default: 0]
+
+      --drive-db <DRIVE_DB>
+          Pre-saturation feedback gain in dB
+
+          [default: 0]
+
+      --cutoff-hz <CUTOFF_HZ>
+          Feedback low-pass cutoff in Hz
+
+          [default: 2000]
+
   -h, --help
           Print help
 ```
