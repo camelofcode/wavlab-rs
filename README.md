@@ -1,7 +1,16 @@
 # wavlab
 
-`wavlab` is a Rust library and command-line tool for reading, inspecting,
-creating, processing, and saving PCM WAV files.
+`wavlab` is a Rust library, command-line audio processor, and learning resource
+for fundamental digital signal processing algorithms. It provides practical,
+readable implementations of waveform and noise generation, filters, delays,
+saturation, algorithmic reverb, level measurement, and other common audio
+operations. Students can inspect how an algorithm works, apply it to a WAV
+file, and hear the result.
+
+The code favours clear, explicit implementations that can be studied and
+adapted, while still exposing the processing through a reusable library and a
+complete CLI application. Algorithm sources and further reading are collected
+in the [references](#references).
 
 It supports mono and stereo files containing 8-, 16-, 24-, or 32-bit integer
 PCM. WAV samples can be loaded in full or inspected as metadata only. Broadcast
