@@ -1,6 +1,6 @@
 use crate::wav_file::WavFile;
 
-use super::generate_samples;
+use super::{GeneratorError, generate_samples};
 
 impl WavFile {
     /// Replaces the samples with uniformly distributed white noise.
@@ -11,10 +11,7 @@ impl WavFile {
     /// # Errors
     ///
     /// Returns an error if the generated sample count cannot be represented.
-    pub fn generate_white_noise(
-        &mut self,
-        length_milliseconds: u32,
-    ) -> Result<(), crate::WavError> {
+    pub fn generate_white_noise(&mut self, length_milliseconds: u32) -> Result<(), GeneratorError> {
         generate_samples(self, length_milliseconds, |_| {
             rand::random_range(-1.0..=1.0)
         })
@@ -29,7 +26,7 @@ impl WavFile {
     ///
     /// Returns an error if the generated sample count cannot be represented or
     /// the samples cannot be normalized.
-    pub fn generate_pink_noise(&mut self, length_milliseconds: u32) -> Result<(), crate::WavError> {
+    pub fn generate_pink_noise(&mut self, length_milliseconds: u32) -> Result<(), GeneratorError> {
         let mut buffers = [0.0; 7];
 
         generate_samples(self, length_milliseconds, |_| {
@@ -45,7 +42,8 @@ impl WavFile {
             buffers[6] = 0.115_926 * white;
             sample
         })?;
-        self.normalize()
+        self.normalize()?;
+        Ok(())
     }
 }
 

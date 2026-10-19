@@ -2,7 +2,7 @@ use std::f64::consts::FRAC_2_PI;
 
 use crate::{constants::TAU, wav_file::WavFile};
 
-use super::{generate_samples, validate_frequency, validate_harmonics};
+use super::{GeneratorError, generate_samples, validate_frequency, validate_harmonics};
 
 impl WavFile {
     /// Replaces the samples with a directly generated triangle wave.
@@ -18,7 +18,7 @@ impl WavFile {
         &mut self,
         length_milliseconds: u32,
         frequency: f64,
-    ) -> Result<(), crate::WavError> {
+    ) -> Result<(), GeneratorError> {
         validate_frequency(self, frequency)?;
         let radians_per_frame = TAU * frequency / f64::from(self.sample_rate());
         generate_samples(self, length_milliseconds, |frame| {
@@ -41,7 +41,7 @@ impl WavFile {
         length_milliseconds: u32,
         frequency: f64,
         harmonics: u32,
-    ) -> Result<(), crate::WavError> {
+    ) -> Result<(), GeneratorError> {
         validate_frequency(self, frequency)?;
         validate_harmonics(harmonics)?;
 
@@ -72,6 +72,7 @@ impl WavFile {
             sample
         })?;
 
-        self.normalize()
+        self.normalize()?;
+        Ok(())
     }
 }

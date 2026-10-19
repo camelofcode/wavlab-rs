@@ -3,7 +3,9 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use wavlab::cli::{Cli, Command};
-use wavlab::{WavError, WavFile};
+use wavlab::{GeneratorError, WavError, WavFile};
+
+type CliResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> ExitCode {
     match run(Cli::parse()) {
@@ -15,7 +17,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(cli: Cli) -> Result<(), WavError> {
+fn run(cli: Cli) -> CliResult<()> {
     match cli.command {
         Command::SineWave {
             output,
@@ -289,11 +291,12 @@ fn generate_file(
     output: PathBuf,
     sample_rate: u32,
     bit_depth: u16,
-    generate: impl FnOnce(&mut WavFile) -> Result<(), WavError>,
-) -> Result<(), WavError> {
+    generate: impl FnOnce(&mut WavFile) -> Result<(), GeneratorError>,
+) -> Result<(), GeneratorError> {
     let mut wav_file = WavFile::new(1, sample_rate, bit_depth)?;
     generate(&mut wav_file)?;
-    wav_file.save(output)
+    wav_file.save(output)?;
+    Ok(())
 }
 
 fn process_file(

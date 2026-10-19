@@ -1,5 +1,5 @@
 use crate::constants::MINUS_THREE_DB;
-use crate::wav_file::{WavError, WavFile};
+use crate::{ProcessingError, WavFile};
 
 impl WavFile {
     /// Combines separate mono left and right signals into a stereo file.
@@ -10,11 +10,11 @@ impl WavFile {
     ///
     /// # Errors
     ///
-    /// Returns [`WavError::ExpectedMono`] if either input is not mono,
-    /// [`WavError::SampleRateMismatch`] if their sample rates differ, or
-    /// [`WavError::SamplesNotLoaded`] if either input was opened with
+    /// Returns [`ProcessingError::ExpectedMono`] if either input is not mono,
+    /// [`ProcessingError::SampleRateMismatch`] if their sample rates differ, or
+    /// [`ProcessingError::Wav`] if either input was opened with
     /// [`WavFile::open_metadata`].
-    pub fn combine_left_right(left: &WavFile, right: &WavFile) -> Result<WavFile, WavError> {
+    pub fn combine_left_right(left: &WavFile, right: &WavFile) -> Result<WavFile, ProcessingError> {
         combine_mono_pair(left, right, |left, right| [left, right])
     }
 
@@ -28,11 +28,11 @@ impl WavFile {
     ///
     /// # Errors
     ///
-    /// Returns [`WavError::ExpectedMono`] if either input is not mono,
-    /// [`WavError::SampleRateMismatch`] if their sample rates differ, or
-    /// [`WavError::SamplesNotLoaded`] if either input was opened with
+    /// Returns [`ProcessingError::ExpectedMono`] if either input is not mono,
+    /// [`ProcessingError::SampleRateMismatch`] if their sample rates differ, or
+    /// [`ProcessingError::Wav`] if either input was opened with
     /// [`WavFile::open_metadata`].
-    pub fn combine_mid_side(mid: &WavFile, side: &WavFile) -> Result<WavFile, WavError> {
+    pub fn combine_mid_side(mid: &WavFile, side: &WavFile) -> Result<WavFile, ProcessingError> {
         let decode_scale = 0.5 / MINUS_THREE_DB;
         combine_mono_pair(mid, side, |mid, side| {
             [(mid + side) * decode_scale, (mid - side) * decode_scale]
@@ -49,11 +49,11 @@ impl WavFile {
     ///
     /// # Errors
     ///
-    /// Returns [`WavError::TooFewInputs`] for fewer than two files,
-    /// [`WavError::SampleRateMismatch`] if their sample rates differ, or
-    /// [`WavError::SamplesNotLoaded`] if any input was opened with
+    /// Returns [`ProcessingError::TooFewInputs`] for fewer than two files,
+    /// [`ProcessingError::SampleRateMismatch`] if their sample rates differ, or
+    /// [`ProcessingError::Wav`] if any input was opened with
     /// [`WavFile::open_metadata`].
-    pub fn mix(inputs: &[WavFile]) -> Result<WavFile, WavError> {
+    pub fn mix(inputs: &[WavFile]) -> Result<WavFile, ProcessingError> {
         validate_minimum_inputs(inputs)?;
         let sample_rate = validate_sample_rates(inputs)?;
         let input_samples = loaded_samples(inputs)?;
@@ -71,7 +71,7 @@ impl WavFile {
             .expect("minimum input count was validated");
         let output_sample_count = frame_count
             .checked_mul(usize::from(output_channels))
-            .ok_or(WavError::SizeOverflow("mixed sample data"))?;
+            .ok_or(ProcessingError::SizeOverflow("mixed sample data"))?;
         let mut output_samples = Vec::with_capacity(output_sample_count);
         let input_count = inputs.len() as f64;
 
@@ -115,11 +115,11 @@ impl WavFile {
     ///
     /// # Errors
     ///
-    /// Returns [`WavError::TooFewInputs`] for fewer than two files,
-    /// [`WavError::SampleRateMismatch`] or [`WavError::ChannelCountMismatch`]
-    /// for incompatible formats, or [`WavError::SamplesNotLoaded`] if any
+    /// Returns [`ProcessingError::TooFewInputs`] for fewer than two files,
+    /// [`ProcessingError::SampleRateMismatch`] or [`ProcessingError::ChannelCountMismatch`]
+    /// for incompatible formats, or [`ProcessingError::Wav`] if any
     /// input was opened with [`WavFile::open_metadata`].
-    pub fn join(inputs: &[WavFile]) -> Result<WavFile, WavError> {
+    pub fn join(inputs: &[WavFile]) -> Result<WavFile, ProcessingError> {
         validate_minimum_inputs(inputs)?;
         let sample_rate = validate_sample_rates(inputs)?;
         let number_of_channels = validate_channel_counts(inputs)?;
@@ -127,7 +127,7 @@ impl WavFile {
         let total_samples = input_samples.iter().try_fold(0_usize, |total, samples| {
             total
                 .checked_add(samples.len())
-                .ok_or(WavError::SizeOverflow("joined sample data"))
+                .ok_or(ProcessingError::SizeOverflow("joined sample data"))
         })?;
         let mut joined_samples = Vec::with_capacity(total_samples);
         for samples in input_samples {
@@ -144,15 +144,15 @@ fn combine_mono_pair(
     first: &WavFile,
     second: &WavFile,
     combine: impl Fn(f64, f64) -> [f64; 2],
-) -> Result<WavFile, WavError> {
+) -> Result<WavFile, ProcessingError> {
     for input in [first, second] {
         if input.number_of_channels() != 1 {
-            return Err(WavError::ExpectedMono(input.number_of_channels()));
+            return Err(ProcessingError::ExpectedMono(input.number_of_channels()));
         }
     }
 
     if first.sample_rate() != second.sample_rate() {
-        return Err(WavError::SampleRateMismatch {
+        return Err(ProcessingError::SampleRateMismatch {
             expected: first.sample_rate(),
             actual: second.sample_rate(),
         });
@@ -163,7 +163,7 @@ fn combine_mono_pair(
     let frame_count = first_samples.len().max(second_samples.len());
     let sample_count = frame_count
         .checked_mul(2)
-        .ok_or(WavError::SizeOverflow("combined sample data"))?;
+        .ok_or(ProcessingError::SizeOverflow("combined sample data"))?;
     let mut stereo_samples = Vec::with_capacity(sample_count);
 
     for frame in 0..frame_count {
@@ -182,10 +182,10 @@ fn combine_mono_pair(
     Ok(output)
 }
 
-fn validate_minimum_inputs(inputs: &[WavFile]) -> Result<(), WavError> {
+fn validate_minimum_inputs(inputs: &[WavFile]) -> Result<(), ProcessingError> {
     const MINIMUM_INPUTS: usize = 2;
     if inputs.len() < MINIMUM_INPUTS {
-        return Err(WavError::TooFewInputs {
+        return Err(ProcessingError::TooFewInputs {
             minimum: MINIMUM_INPUTS,
             actual: inputs.len(),
         });
@@ -193,11 +193,11 @@ fn validate_minimum_inputs(inputs: &[WavFile]) -> Result<(), WavError> {
     Ok(())
 }
 
-fn validate_sample_rates(inputs: &[WavFile]) -> Result<u32, WavError> {
+fn validate_sample_rates(inputs: &[WavFile]) -> Result<u32, ProcessingError> {
     let expected = inputs[0].sample_rate();
     for input in &inputs[1..] {
         if input.sample_rate() != expected {
-            return Err(WavError::SampleRateMismatch {
+            return Err(ProcessingError::SampleRateMismatch {
                 expected,
                 actual: input.sample_rate(),
             });
@@ -206,11 +206,11 @@ fn validate_sample_rates(inputs: &[WavFile]) -> Result<u32, WavError> {
     Ok(expected)
 }
 
-fn validate_channel_counts(inputs: &[WavFile]) -> Result<u16, WavError> {
+fn validate_channel_counts(inputs: &[WavFile]) -> Result<u16, ProcessingError> {
     let expected = inputs[0].number_of_channels();
     for input in &inputs[1..] {
         if input.number_of_channels() != expected {
-            return Err(WavError::ChannelCountMismatch {
+            return Err(ProcessingError::ChannelCountMismatch {
                 expected,
                 actual: input.number_of_channels(),
             });
@@ -227,13 +227,16 @@ fn maximum_bit_depth(inputs: &[WavFile]) -> u16 {
         .expect("minimum input count was validated")
 }
 
-fn loaded_samples(inputs: &[WavFile]) -> Result<Vec<&[f64]>, WavError> {
-    inputs.iter().map(WavFile::samples).collect()
+fn loaded_samples(inputs: &[WavFile]) -> Result<Vec<&[f64]>, ProcessingError> {
+    inputs
+        .iter()
+        .map(|input| input.samples().map_err(ProcessingError::from))
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{WavError, WavFile};
+    use crate::{ProcessingError, WavFile};
 
     const EPSILON: f64 = 1e-12;
 
@@ -274,11 +277,11 @@ mod tests {
 
         assert!(matches!(
             WavFile::combine_left_right(&stereo, &mono),
-            Err(WavError::ExpectedMono(2))
+            Err(ProcessingError::ExpectedMono(2))
         ));
         assert!(matches!(
             WavFile::combine_left_right(&mono, &other_rate),
-            Err(WavError::SampleRateMismatch { .. })
+            Err(ProcessingError::SampleRateMismatch { .. })
         ));
     }
 
@@ -323,14 +326,14 @@ mod tests {
 
         assert!(matches!(
             WavFile::mix(&[]),
-            Err(WavError::TooFewInputs {
+            Err(ProcessingError::TooFewInputs {
                 minimum: 2,
                 actual: 0
             })
         ));
         assert!(matches!(
             WavFile::mix(&[first, second]),
-            Err(WavError::SampleRateMismatch { .. })
+            Err(ProcessingError::SampleRateMismatch { .. })
         ));
     }
 
@@ -358,17 +361,17 @@ mod tests {
 
         assert!(matches!(
             WavFile::join(&[]),
-            Err(WavError::TooFewInputs { .. })
+            Err(ProcessingError::TooFewInputs { .. })
         ));
         assert!(matches!(
             WavFile::join(&[mono, stereo]),
-            Err(WavError::ChannelCountMismatch { .. })
+            Err(ProcessingError::ChannelCountMismatch { .. })
         ));
 
         let first = file(1, 48_000, 24, vec![0.1]);
         assert!(matches!(
             WavFile::join(&[first, other_rate]),
-            Err(WavError::SampleRateMismatch { .. })
+            Err(ProcessingError::SampleRateMismatch { .. })
         ));
     }
 }

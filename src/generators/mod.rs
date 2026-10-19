@@ -1,25 +1,28 @@
+mod error;
 mod noise;
 mod sawtooth;
 mod sine;
 mod square;
 mod triangle;
 
-use crate::{WavError, WavFile};
+pub use error::GeneratorError;
 
-fn validate_frequency(wav_file: &WavFile, frequency: f64) -> Result<(), WavError> {
+use crate::WavFile;
+
+fn validate_frequency(wav_file: &WavFile, frequency: f64) -> Result<(), GeneratorError> {
     let nyquist_frequency = f64::from(wav_file.sample_rate()) / 2.0;
     if frequency.is_finite() && frequency > 0.0 && frequency < nyquist_frequency {
         Ok(())
     } else {
-        Err(WavError::InvalidFrequency(frequency))
+        Err(GeneratorError::InvalidFrequency(frequency))
     }
 }
 
-fn validate_harmonics(harmonics: u32) -> Result<(), WavError> {
+fn validate_harmonics(harmonics: u32) -> Result<(), GeneratorError> {
     if harmonics > 0 {
         Ok(())
     } else {
-        Err(WavError::InvalidHarmonicCount(harmonics))
+        Err(GeneratorError::InvalidHarmonicCount(harmonics))
     }
 }
 
@@ -27,26 +30,27 @@ fn generate_samples(
     wav_file: &mut WavFile,
     length_milliseconds: u32,
     mut generate_frame: impl FnMut(usize) -> f64,
-) -> Result<(), WavError> {
+) -> Result<(), GeneratorError> {
     let frame_count = u64::from(wav_file.sample_rate()) * u64::from(length_milliseconds) / 1_000;
     let frame_count = usize::try_from(frame_count)
-        .map_err(|_| WavError::SizeOverflow("generated frame count"))?;
+        .map_err(|_| GeneratorError::SizeOverflow("generated frame count"))?;
     let channels = usize::from(wav_file.number_of_channels());
     let sample_count = frame_count
         .checked_mul(channels)
-        .ok_or(WavError::SizeOverflow("generated sample count"))?;
+        .ok_or(GeneratorError::SizeOverflow("generated sample count"))?;
     let mut samples = Vec::with_capacity(sample_count);
 
     for frame in 0..frame_count {
         samples.extend(std::iter::repeat_n(generate_frame(frame), channels));
     }
 
-    wav_file.set_samples(samples)
+    wav_file.set_samples(samples)?;
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{WavError, WavFile};
+    use crate::{GeneratorError, WavFile};
 
     fn mono_test_file() -> WavFile {
         WavFile::new(1, 8, 16).unwrap()
@@ -91,15 +95,15 @@ mod tests {
 
         assert!(matches!(
             wav_file.generate_square_wave_additive(1_000, 1.0, 0),
-            Err(WavError::InvalidHarmonicCount(0))
+            Err(GeneratorError::InvalidHarmonicCount(0))
         ));
         assert!(matches!(
             wav_file.generate_triangle_wave_additive(1_000, 1.0, 0),
-            Err(WavError::InvalidHarmonicCount(0))
+            Err(GeneratorError::InvalidHarmonicCount(0))
         ));
         assert!(matches!(
             wav_file.generate_sawtooth_wave_additive(1_000, 1.0, 0),
-            Err(WavError::InvalidHarmonicCount(0))
+            Err(GeneratorError::InvalidHarmonicCount(0))
         ));
     }
 
@@ -109,15 +113,15 @@ mod tests {
 
         assert!(matches!(
             wav_file.generate_sine_wave(1_000, 0.0),
-            Err(WavError::InvalidFrequency(0.0))
+            Err(GeneratorError::InvalidFrequency(0.0))
         ));
         assert!(matches!(
             wav_file.generate_sine_wave(1_000, f64::NAN),
-            Err(WavError::InvalidFrequency(value)) if value.is_nan()
+            Err(GeneratorError::InvalidFrequency(value)) if value.is_nan()
         ));
         assert!(matches!(
             wav_file.generate_sine_wave(1_000, 4.0),
-            Err(WavError::InvalidFrequency(4.0))
+            Err(GeneratorError::InvalidFrequency(4.0))
         ));
     }
 }

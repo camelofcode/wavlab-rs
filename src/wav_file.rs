@@ -64,7 +64,7 @@ struct DataChunk {
 }
 
 #[derive(Debug)]
-/// An error encountered while reading, creating, processing, or saving a WAV file.
+/// An error encountered while reading, creating, storing, or saving a WAV file.
 pub enum WavError {
     /// An underlying filesystem or stream error.
     Io(std::io::Error),
@@ -72,39 +72,8 @@ pub enum WavError {
     InvalidFile(String),
     /// The requested or stored channel count is unsupported.
     UnsupportedChannelCount(u16),
-    /// An operation expected a mono file.
-    ExpectedMono(u16),
-    /// An operation expected a stereo file.
-    ExpectedStereo(u16),
-    /// A requested split time does not identify a valid boundary.
-    InvalidSplitTime(u64),
-    /// An operation received fewer input files than it requires.
-    TooFewInputs {
-        /// The minimum number of inputs required.
-        minimum: usize,
-        /// The number of inputs supplied.
-        actual: usize,
-    },
-    /// Input files have different sample rates.
-    SampleRateMismatch {
-        /// The sample rate established by the first input.
-        expected: u32,
-        /// The incompatible sample rate encountered later.
-        actual: u32,
-    },
-    /// Input files have different channel counts.
-    ChannelCountMismatch {
-        /// The channel count established by the first input.
-        expected: u16,
-        /// The incompatible channel count encountered later.
-        actual: u16,
-    },
     /// A sample rate of zero was requested or encountered.
     InvalidSampleRate(u32),
-    /// A generated waveform frequency is outside the usable sampled range.
-    InvalidFrequency(f64),
-    /// An additive generator was asked to use no harmonics.
-    InvalidHarmonicCount(u32),
     /// The requested or stored integer PCM bit depth is unsupported.
     UnsupportedBitsPerSample(u16),
     /// The WAV byte rate cannot be represented by the file format.
@@ -284,46 +253,12 @@ impl Display for WavError {
                 formatter,
                 "unsupported channel count {count}; only mono and stereo PCM are supported"
             ),
-            Self::ExpectedMono(count) => {
-                write!(formatter, "expected a mono file, found {count} channels")
-            }
-            Self::ExpectedStereo(count) => {
-                write!(formatter, "expected a stereo file, found {count} channel")?;
-                if *count != 1 {
-                    formatter.write_str("s")?;
-                }
-                Ok(())
-            }
-            Self::InvalidSplitTime(milliseconds) => write!(
-                formatter,
-                "split time {milliseconds} ms must resolve to a distinct, increasing frame boundary inside the file"
-            ),
-            Self::TooFewInputs { minimum, actual } => write!(
-                formatter,
-                "expected at least {minimum} input files, found {actual}"
-            ),
-            Self::SampleRateMismatch { expected, actual } => write!(
-                formatter,
-                "sample rate mismatch: expected {expected} Hz, found {actual} Hz"
-            ),
-            Self::ChannelCountMismatch { expected, actual } => write!(
-                formatter,
-                "channel count mismatch: expected {expected}, found {actual}"
-            ),
             Self::InvalidSampleRate(sample_rate) => {
                 write!(
                     formatter,
                     "invalid sample rate {sample_rate}; it must be greater than zero"
                 )
             }
-            Self::InvalidFrequency(frequency) => write!(
-                formatter,
-                "invalid frequency {frequency}; it must be finite, greater than zero, and below the Nyquist frequency"
-            ),
-            Self::InvalidHarmonicCount(harmonics) => write!(
-                formatter,
-                "invalid harmonic count {harmonics}; it must be greater than zero"
-            ),
             Self::UnsupportedBitsPerSample(bits) => write!(
                 formatter,
                 "unsupported PCM bit depth {bits}; expected 8, 16, 24, or 32 bits"

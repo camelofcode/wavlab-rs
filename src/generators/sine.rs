@@ -1,6 +1,6 @@
 use crate::{constants::TAU, wav_file::WavFile};
 
-use super::{generate_samples, validate_frequency};
+use super::{GeneratorError, generate_samples, validate_frequency};
 
 impl WavFile {
     /// Replaces the samples with a sine wave of the requested length and frequency.
@@ -16,7 +16,7 @@ impl WavFile {
         &mut self,
         length_milliseconds: u32,
         frequency: f64,
-    ) -> Result<(), crate::WavError> {
+    ) -> Result<(), GeneratorError> {
         validate_frequency(self, frequency)?;
 
         let radians_per_frame = TAU * frequency / f64::from(self.sample_rate());

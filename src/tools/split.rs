@@ -1,5 +1,5 @@
 use crate::constants::MINUS_THREE_DB;
-use crate::wav_file::{WavError, WavFile};
+use crate::{ProcessingError, WavFile};
 
 impl WavFile {
     /// Splits the loaded stereo samples into separate mono files.
@@ -9,12 +9,12 @@ impl WavFile {
     ///
     /// # Errors
     ///
-    /// Returns [`WavError::ExpectedStereo`] if this is not a stereo file, or
-    /// [`WavError::SamplesNotLoaded`] if it was opened with
+    /// Returns [`ProcessingError::ExpectedStereo`] if this is not a stereo file, or
+    /// [`ProcessingError::Wav`] if it was opened with
     /// [`WavFile::open_metadata`].
-    pub fn split_stereo(&self) -> Result<(WavFile, WavFile), WavError> {
+    pub fn split_stereo(&self) -> Result<(WavFile, WavFile), ProcessingError> {
         if self.number_of_channels() != 2 {
-            return Err(WavError::ExpectedStereo(self.number_of_channels()));
+            return Err(ProcessingError::ExpectedStereo(self.number_of_channels()));
         }
 
         let samples = self.samples()?;
@@ -46,12 +46,12 @@ impl WavFile {
     ///
     /// # Errors
     ///
-    /// Returns [`WavError::ExpectedStereo`] if this is not a stereo file, or
-    /// [`WavError::SamplesNotLoaded`] if it was opened with
+    /// Returns [`ProcessingError::ExpectedStereo`] if this is not a stereo file, or
+    /// [`ProcessingError::Wav`] if it was opened with
     /// [`WavFile::open_metadata`].
-    pub fn split_mid_side(&self) -> Result<(WavFile, WavFile), WavError> {
+    pub fn split_mid_side(&self) -> Result<(WavFile, WavFile), ProcessingError> {
         if self.number_of_channels() != 2 {
-            return Err(WavError::ExpectedStereo(self.number_of_channels()));
+            return Err(ProcessingError::ExpectedStereo(self.number_of_channels()));
         }
 
         let samples = self.samples()?;
@@ -84,10 +84,10 @@ impl WavFile {
     ///
     /// # Errors
     ///
-    /// Returns [`WavError::InvalidSplitTime`] if any time does not identify a
-    /// valid next boundary, or [`WavError::SamplesNotLoaded`] if this file was
+    /// Returns [`ProcessingError::InvalidSplitTime`] if any time does not identify a
+    /// valid next boundary, or [`ProcessingError::Wav`] if this file was
     /// opened with [`WavFile::open_metadata`].
-    pub fn split_at_times(&self, split_times_ms: &[u64]) -> Result<Vec<WavFile>, WavError> {
+    pub fn split_at_times(&self, split_times_ms: &[u64]) -> Result<Vec<WavFile>, ProcessingError> {
         let samples = self.samples()?;
         let number_of_channels = usize::from(self.number_of_channels());
         let frame_count = samples.len() / number_of_channels;
@@ -98,7 +98,7 @@ impl WavFile {
             let frame = u128::from(milliseconds) * u128::from(self.sample_rate()) / 1_000;
 
             if frame <= previous_frame || frame >= frame_count as u128 {
-                return Err(WavError::InvalidSplitTime(milliseconds));
+                return Err(ProcessingError::InvalidSplitTime(milliseconds));
             }
 
             previous_frame = frame;
@@ -128,7 +128,7 @@ fn file_with_samples_like(
     source: &WavFile,
     number_of_channels: u16,
     samples: Vec<f64>,
-) -> Result<WavFile, WavError> {
+) -> Result<WavFile, ProcessingError> {
     let mut output = WavFile::new(
         number_of_channels,
         source.sample_rate(),
@@ -141,7 +141,7 @@ fn file_with_samples_like(
 #[cfg(test)]
 mod tests {
     use crate::constants::MINUS_THREE_DB;
-    use crate::{WavError, WavFile};
+    use crate::{ProcessingError, WavFile};
 
     const EPSILON: f64 = 1e-12;
 
@@ -193,7 +193,7 @@ mod tests {
             Err(error) => error,
         };
 
-        assert!(matches!(error, WavError::ExpectedStereo(1)));
+        assert!(matches!(error, ProcessingError::ExpectedStereo(1)));
     }
 
     #[test]
@@ -225,7 +225,7 @@ mod tests {
 
         assert!(matches!(
             mono.split_mid_side(),
-            Err(WavError::ExpectedStereo(1))
+            Err(ProcessingError::ExpectedStereo(1))
         ));
     }
 
@@ -292,15 +292,15 @@ mod tests {
 
         assert!(matches!(
             input.split_at_times(&[0]),
-            Err(WavError::InvalidSplitTime(0))
+            Err(ProcessingError::InvalidSplitTime(0))
         ));
         assert!(matches!(
             input.split_at_times(&[3, 2]),
-            Err(WavError::InvalidSplitTime(2))
+            Err(ProcessingError::InvalidSplitTime(2))
         ));
         assert!(matches!(
             input.split_at_times(&[4]),
-            Err(WavError::InvalidSplitTime(4))
+            Err(ProcessingError::InvalidSplitTime(4))
         ));
     }
 }

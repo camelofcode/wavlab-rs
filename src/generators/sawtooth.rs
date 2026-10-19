@@ -1,6 +1,6 @@
 use crate::{constants::TAU, wav_file::WavFile};
 
-use super::{generate_samples, validate_frequency, validate_harmonics};
+use super::{GeneratorError, generate_samples, validate_frequency, validate_harmonics};
 
 impl WavFile {
     /// Replaces the samples with a directly generated rising sawtooth wave.
@@ -16,7 +16,7 @@ impl WavFile {
         &mut self,
         length_milliseconds: u32,
         frequency: f64,
-    ) -> Result<(), crate::WavError> {
+    ) -> Result<(), GeneratorError> {
         validate_frequency(self, frequency)?;
 
         let cycles_per_frame = frequency / f64::from(self.sample_rate());
@@ -42,7 +42,7 @@ impl WavFile {
         length_milliseconds: u32,
         frequency: f64,
         harmonics: u32,
-    ) -> Result<(), crate::WavError> {
+    ) -> Result<(), GeneratorError> {
         validate_frequency(self, frequency)?;
 
         validate_harmonics(harmonics)?;
@@ -71,6 +71,7 @@ impl WavFile {
             sample
         })?;
 
-        self.normalize()
+        self.normalize()?;
+        Ok(())
     }
 }
