@@ -263,6 +263,18 @@ fn run(cli: Cli) -> CliResult<()> {
                 )
             })?;
         }
+        Command::Reverb {
+            input,
+            room_size,
+            decay_seconds,
+            mix,
+            output,
+            tail_ms,
+        } => {
+            process_effect_file(input, output, |wav_file| {
+                wav_file.reverb(room_size, decay_seconds, mix, tail_ms)
+            })?;
+        }
         Command::EqPeak {
             input,
             frequency,
@@ -976,7 +988,7 @@ mod tests {
             "wavlab",
             "digital-delay-mono",
             "in.wav",
-            "250",
+            "250.5",
             "0.4",
             "0.5",
             "out.wav",
@@ -988,7 +1000,7 @@ mod tests {
             digital_mono.command,
             Command::DigitalDelayMono(MonoDelayArgs {
                 input,
-                delay_ms: 250,
+                delay_ms: 250.5,
                 feedback: 0.4,
                 mix: 0.5,
                 output: Some(output),
@@ -1011,9 +1023,9 @@ mod tests {
             digital_stereo.command,
             Command::DigitalDelayStereo(StereoDelayArgs {
                 input,
-                left_delay_ms: 200,
+                left_delay_ms: 200.0,
                 left_feedback: 0.3,
-                right_delay_ms: 350,
+                right_delay_ms: 350.0,
                 right_feedback: 0.4,
                 mix: 0.5,
                 output: None,
@@ -1035,7 +1047,10 @@ mod tests {
         assert!(matches!(
             analog_mono.command,
             Command::AnalogDelayMono {
-                delay: MonoDelayArgs { delay_ms: 250, .. },
+                delay: MonoDelayArgs {
+                    delay_ms: 250.0,
+                    ..
+                },
                 cutoff_hz: 3_000.0,
             }
         ));
@@ -1101,6 +1116,34 @@ mod tests {
                 cutoff_hz: 1_500.0,
                 ..
             }
+        ));
+    }
+
+    #[test]
+    fn parses_reverb_command() {
+        let reverb = Cli::try_parse_from([
+            "wavlab",
+            "reverb",
+            "in.wav",
+            "0.6",
+            "2.5",
+            "0.35",
+            "out.wav",
+            "--tail-ms",
+            "3000",
+        ])
+        .expect("valid reverb command");
+
+        assert!(matches!(
+            reverb.command,
+            Command::Reverb {
+                input,
+                room_size: 0.6,
+                decay_seconds: 2.5,
+                mix: 0.35,
+                output: Some(output),
+                tail_ms: 3000,
+            } if input == Path::new("in.wav") && output == Path::new("out.wav")
         ));
     }
 
@@ -1192,13 +1235,13 @@ mod tests {
             &digital_mono_output,
             Command::DigitalDelayMono(MonoDelayArgs {
                 input: input.clone(),
-                delay_ms: 1,
+                delay_ms: 1.0,
                 feedback: 0.5,
                 mix: 0.5,
                 output: Some(digital_mono_output.clone()),
                 tail_ms: 2,
             }),
-            |wav_file| wav_file.digital_delay(DelayChannelSettings::new(1, 0.5), 0.5, 2),
+            |wav_file| wav_file.digital_delay(DelayChannelSettings::new(1.0, 0.5), 0.5, 2),
         );
 
         let digital_stereo_output = files.path("digital-delay-stereo-output");
@@ -1207,9 +1250,9 @@ mod tests {
             &digital_stereo_output,
             Command::DigitalDelayStereo(StereoDelayArgs {
                 input: input.clone(),
-                left_delay_ms: 1,
+                left_delay_ms: 1.0,
                 left_feedback: 0.5,
-                right_delay_ms: 2,
+                right_delay_ms: 2.0,
                 right_feedback: 0.25,
                 mix: 0.5,
                 output: Some(digital_stereo_output.clone()),
@@ -1217,8 +1260,8 @@ mod tests {
             }),
             |wav_file| {
                 wav_file.digital_delay_stereo(
-                    DelayChannelSettings::new(1, 0.5),
-                    DelayChannelSettings::new(2, 0.25),
+                    DelayChannelSettings::new(1.0, 0.5),
+                    DelayChannelSettings::new(2.0, 0.25),
                     0.5,
                     2,
                 )
@@ -1232,7 +1275,7 @@ mod tests {
             Command::AnalogDelayMono {
                 delay: MonoDelayArgs {
                     input: input.clone(),
-                    delay_ms: 1,
+                    delay_ms: 1.0,
                     feedback: 0.5,
                     mix: 0.5,
                     output: Some(analog_mono_output.clone()),
@@ -1242,7 +1285,7 @@ mod tests {
             },
             |wav_file| {
                 wav_file.analog_delay_with_cutoff(
-                    DelayChannelSettings::new(1, 0.5),
+                    DelayChannelSettings::new(1.0, 0.5),
                     0.5,
                     1_500.0,
                     2,
@@ -1257,9 +1300,9 @@ mod tests {
             Command::AnalogDelayStereo {
                 delay: StereoDelayArgs {
                     input: input.clone(),
-                    left_delay_ms: 1,
+                    left_delay_ms: 1.0,
                     left_feedback: 0.5,
-                    right_delay_ms: 2,
+                    right_delay_ms: 2.0,
                     right_feedback: 0.25,
                     mix: 0.5,
                     output: Some(analog_stereo_output.clone()),
@@ -1269,8 +1312,8 @@ mod tests {
             },
             |wav_file| {
                 wav_file.analog_delay_stereo_with_cutoff(
-                    DelayChannelSettings::new(1, 0.5),
-                    DelayChannelSettings::new(2, 0.25),
+                    DelayChannelSettings::new(1.0, 0.5),
+                    DelayChannelSettings::new(2.0, 0.25),
                     0.5,
                     1_500.0,
                     2,
@@ -1285,7 +1328,7 @@ mod tests {
             Command::TapeDelayMono {
                 delay: MonoDelayArgs {
                     input: input.clone(),
-                    delay_ms: 1,
+                    delay_ms: 1.0,
                     feedback: 0.5,
                     mix: 0.5,
                     output: Some(tape_mono_output.clone()),
@@ -1296,7 +1339,7 @@ mod tests {
             },
             |wav_file| {
                 wav_file.tape_delay_with_cutoff(
-                    DelayChannelSettings::new(1, 0.5),
+                    DelayChannelSettings::new(1.0, 0.5),
                     0.5,
                     1_500.0,
                     3.0,
@@ -1312,9 +1355,9 @@ mod tests {
             Command::TapeDelayStereo {
                 delay: StereoDelayArgs {
                     input: input.clone(),
-                    left_delay_ms: 1,
+                    left_delay_ms: 1.0,
                     left_feedback: 0.5,
-                    right_delay_ms: 2,
+                    right_delay_ms: 2.0,
                     right_feedback: 0.25,
                     mix: 0.5,
                     output: Some(tape_stereo_output.clone()),
@@ -1325,14 +1368,36 @@ mod tests {
             },
             |wav_file| {
                 wav_file.tape_delay_stereo_with_cutoff(
-                    DelayChannelSettings::new(1, 0.5),
-                    DelayChannelSettings::new(2, 0.25),
+                    DelayChannelSettings::new(1.0, 0.5),
+                    DelayChannelSettings::new(2.0, 0.25),
                     0.5,
                     1_500.0,
                     3.0,
                     2,
                 )
             },
+        );
+    }
+
+    #[test]
+    fn reverb_command_writes_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("reverb-input");
+        let output = files.path("reverb-output");
+        save_mono_file(&input, vec![0.5, 0.0, 0.0]);
+
+        assert_effect_command_matches(
+            &input,
+            &output,
+            Command::Reverb {
+                input: input.clone(),
+                room_size: 0.5,
+                decay_seconds: 1.0,
+                mix: 0.4,
+                output: Some(output.clone()),
+                tail_ms: 100,
+            },
+            |wav_file| wav_file.reverb(0.5, 1.0, 0.4, 100),
         );
     }
 

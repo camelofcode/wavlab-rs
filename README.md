@@ -97,6 +97,10 @@ not represent bundled third-party source code.
 - TAP-plugins, “[TAP Sigmoid
   Booster](https://tomscii.sig7.se/tap-plugins/ladspa/sigmoid.html),” describing
   the nonlinear transfer curve used for tape-style saturation.
+- Manfred R. Schroeder, “[Natural Sounding Artificial
+  Reverberation](https://aes.org/publications/elibrary/elibrary-page/?id=849),”
+  *Journal of the Audio Engineering Society*, volume 10, issue 3, pages 219–223,
+  July 1962. The reverb follows its parallel-comb, series-all-pass design.
 
 ## License
 

@@ -145,10 +145,10 @@ mod tests {
         let mut analog = impulse_file(1_000, 3);
 
         digital
-            .digital_delay(DelayChannelSettings::new(2, 0.5), 1.0, 4)
+            .digital_delay(DelayChannelSettings::new(2.0, 0.5), 1.0, 4)
             .expect("valid digital delay");
         analog
-            .analog_delay_with_cutoff(DelayChannelSettings::new(2, 0.5), 1.0, 200.0, 4)
+            .analog_delay_with_cutoff(DelayChannelSettings::new(2.0, 0.5), 1.0, 200.0, 4)
             .expect("valid analog delay");
 
         assert_eq!(digital.samples().unwrap()[2], analog.samples().unwrap()[2]);
@@ -162,11 +162,11 @@ mod tests {
         let mut explicit = impulse_file(8_000, 10);
 
         default
-            .analog_delay(DelayChannelSettings::new(1, 0.5), 1.0, 2)
+            .analog_delay(DelayChannelSettings::new(1.0, 0.5), 1.0, 2)
             .expect("valid default delay");
         explicit
             .analog_delay_with_cutoff(
-                DelayChannelSettings::new(1, 0.5),
+                DelayChannelSettings::new(1.0, 0.5),
                 1.0,
                 DEFAULT_DELAY_CUTOFF_HZ,
                 2,
@@ -181,7 +181,7 @@ mod tests {
         let mut wav_file = impulse_file(1_000, 2);
 
         assert!(matches!(
-            wav_file.analog_delay_with_cutoff(DelayChannelSettings::new(1, 0.5), 1.0, 500.0, 0,),
+            wav_file.analog_delay_with_cutoff(DelayChannelSettings::new(1.0, 0.5), 1.0, 500.0, 0,),
             Err(EffectError::InvalidCutoffFrequency { .. })
         ));
         assert_eq!(wav_file.samples().unwrap(), &[1.0, 0.0]);
@@ -193,8 +193,8 @@ mod tests {
 
         wav_file
             .analog_delay_stereo(
-                DelayChannelSettings::new(1, 0.5),
-                DelayChannelSettings::new(2, 0.25),
+                DelayChannelSettings::new(1.0, 0.5),
+                DelayChannelSettings::new(2.0, 0.25),
                 1.0,
                 2,
             )

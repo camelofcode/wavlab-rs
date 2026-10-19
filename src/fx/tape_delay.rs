@@ -169,9 +169,9 @@ mod tests {
         let mut tape = mono_impulse_file();
 
         analog
-            .analog_delay_with_cutoff(DelayChannelSettings::new(1, 0.5), 1.0, 2_000.0, 2)
+            .analog_delay_with_cutoff(DelayChannelSettings::new(1.0, 0.5), 1.0, 2_000.0, 2)
             .expect("valid analog delay");
-        tape.tape_delay_with_cutoff(DelayChannelSettings::new(1, 0.5), 1.0, 2_000.0, 0.0, 2)
+        tape.tape_delay_with_cutoff(DelayChannelSettings::new(1.0, 0.5), 1.0, 2_000.0, 0.0, 2)
             .expect("valid tape delay");
 
         assert_eq!(analog.samples().unwrap()[8], tape.samples().unwrap()[8]);
@@ -184,10 +184,10 @@ mod tests {
         let mut driven = mono_impulse_file();
 
         zero_db
-            .tape_delay_with_cutoff(DelayChannelSettings::new(1, 0.5), 1.0, 2_000.0, 0.0, 2)
+            .tape_delay_with_cutoff(DelayChannelSettings::new(1.0, 0.5), 1.0, 2_000.0, 0.0, 2)
             .expect("valid tape delay");
         driven
-            .tape_delay_with_cutoff(DelayChannelSettings::new(1, 0.5), 1.0, 2_000.0, 12.0, 2)
+            .tape_delay_with_cutoff(DelayChannelSettings::new(1.0, 0.5), 1.0, 2_000.0, 12.0, 2)
             .expect("valid tape delay");
 
         assert!(driven.samples().unwrap()[16] > zero_db.samples().unwrap()[16]);
@@ -199,11 +199,11 @@ mod tests {
         let mut explicit = mono_impulse_file();
 
         default
-            .tape_delay(DelayChannelSettings::new(1, 0.5), 1.0, 0.0, 2)
+            .tape_delay(DelayChannelSettings::new(1.0, 0.5), 1.0, 0.0, 2)
             .expect("valid default delay");
         explicit
             .tape_delay_with_cutoff(
-                DelayChannelSettings::new(1, 0.5),
+                DelayChannelSettings::new(1.0, 0.5),
                 1.0,
                 DEFAULT_DELAY_CUTOFF_HZ,
                 0.0,
@@ -220,7 +220,7 @@ mod tests {
 
         assert!(matches!(
             wav_file.tape_delay(
-                DelayChannelSettings::new(1, 0.5),
+                DelayChannelSettings::new(1.0, 0.5),
                 1.0,
                 f64::NAN,
                 0,
@@ -235,8 +235,8 @@ mod tests {
 
         wav_file
             .tape_delay_stereo(
-                DelayChannelSettings::new(1, 0.5),
-                DelayChannelSettings::new(2, 0.25),
+                DelayChannelSettings::new(1.0, 0.5),
+                DelayChannelSettings::new(2.0, 0.25),
                 1.0,
                 6.0,
                 2,

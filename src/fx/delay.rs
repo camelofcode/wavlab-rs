@@ -5,8 +5,8 @@ use super::EffectError;
 /// Delay time and feedback for one channel of a stereo delay.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DelayChannelSettings {
-    /// Delay time in milliseconds.
-    pub delay_milliseconds: u32,
+    /// Delay time in milliseconds; fractional values are supported.
+    pub delay_milliseconds: f64,
     /// Feedback from `-1.0` to `1.0`.
     pub feedback: f64,
 }
@@ -14,7 +14,7 @@ pub struct DelayChannelSettings {
 impl DelayChannelSettings {
     /// Creates channel settings from a delay time and feedback amount.
     #[must_use]
-    pub const fn new(delay_milliseconds: u32, feedback: f64) -> Self {
+    pub const fn new(delay_milliseconds: f64, feedback: f64) -> Self {
         Self {
             delay_milliseconds,
             feedback,
@@ -160,14 +160,17 @@ fn validate_feedback(feedback: f64) -> Result<(), EffectError> {
     Ok(())
 }
 
-fn validate_mix(mix: f64) -> Result<(), EffectError> {
+pub(super) fn validate_mix(mix: f64) -> Result<(), EffectError> {
     if !mix.is_finite() || !(0.0..=1.0).contains(&mix) {
         return Err(EffectError::InvalidMix(mix));
     }
     Ok(())
 }
 
-fn milliseconds_to_frames(milliseconds: u32, sample_rate: u32) -> Result<usize, EffectError> {
+pub(super) fn milliseconds_to_frames(
+    milliseconds: u32,
+    sample_rate: u32,
+) -> Result<usize, EffectError> {
     let frames = u64::from(milliseconds) * u64::from(sample_rate) / 1_000;
     usize::try_from(frames).map_err(|_| EffectError::SizeOverflow("delay tail"))
 }

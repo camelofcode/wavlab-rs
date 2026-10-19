@@ -75,7 +75,7 @@ mod tests {
             .expect("complete sample frames");
 
         wav_file
-            .digital_delay(DelayChannelSettings::new(2, 0.5), 1.0, 4)
+            .digital_delay(DelayChannelSettings::new(2.0, 0.5), 1.0, 4)
             .expect("valid delay");
 
         assert_eq!(
@@ -92,7 +92,7 @@ mod tests {
             .expect("complete sample frames");
 
         wav_file
-            .digital_delay(DelayChannelSettings::new(1, 0.0), 1.0, 1)
+            .digital_delay(DelayChannelSettings::new(1.0, 0.0), 1.0, 1)
             .expect("valid delay");
 
         assert_eq!(wav_file.samples().unwrap(), &[0.0, 0.0, 1.0, 0.0, 0.0, 1.0]);
@@ -107,8 +107,8 @@ mod tests {
 
         wav_file
             .digital_delay_stereo(
-                DelayChannelSettings::new(1, 0.0),
-                DelayChannelSettings::new(2, 0.0),
+                DelayChannelSettings::new(1.0, 0.0),
+                DelayChannelSettings::new(2.0, 0.0),
                 1.0,
                 2,
             )
@@ -129,12 +129,12 @@ mod tests {
             .expect("complete sample frames");
 
         assert!(matches!(
-            wav_file.digital_delay(DelayChannelSettings::new(2, 0.5), 1.1, 0),
+            wav_file.digital_delay(DelayChannelSettings::new(2.0, 0.5), 1.1, 0),
             Err(EffectError::InvalidMix(1.1))
         ));
         assert!(matches!(
-            wav_file.digital_delay(DelayChannelSettings::new(0, 0.5), 1.0, 0),
-            Err(EffectError::Delay(DelayError::DelayTooShort { .. }))
+            wav_file.digital_delay(DelayChannelSettings::new(0.0, 0.5), 1.0, 0),
+            Err(EffectError::Delay(DelayError::InvalidDelayTime(0.0)))
         ));
         assert_eq!(wav_file.samples().unwrap(), &[1.0, 0.0]);
     }

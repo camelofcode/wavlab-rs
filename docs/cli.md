@@ -34,6 +34,7 @@ Commands:
   analog-delay-stereo     Apply a low-pass-filtered stereo delay with independent channel settings
   tape-delay-mono         Apply a saturated, low-pass-filtered delay to every input channel
   tape-delay-stereo       Apply a saturated stereo delay with independent channel settings
+  reverb                  Apply a classic Schroeder algorithmic reverb
   eq-peak                 Apply a peaking EQ boost or cut around a center frequency
   eq-lowshelf             Apply a low-shelf EQ boost or cut
   eq-highshelf            Apply a high-shelf EQ boost or cut
@@ -460,7 +461,7 @@ Arguments:
           WAV file to process
 
   <DELAY_MS>
-          Delay time in milliseconds
+          Delay time in milliseconds; fractional values are supported
 
   <FEEDBACK>
           Feedback from -1 to 1
@@ -493,13 +494,13 @@ Arguments:
           WAV file to process
 
   <LEFT_DELAY_MS>
-          Left-channel delay time in milliseconds
+          Left-channel delay time in milliseconds; fractional values are supported
 
   <LEFT_FEEDBACK>
           Left-channel feedback from -1 to 1
 
   <RIGHT_DELAY_MS>
-          Right-channel delay time in milliseconds
+          Right-channel delay time in milliseconds; fractional values are supported
 
   <RIGHT_FEEDBACK>
           Right-channel feedback from -1 to 1
@@ -532,7 +533,7 @@ Arguments:
           WAV file to process
 
   <DELAY_MS>
-          Delay time in milliseconds
+          Delay time in milliseconds; fractional values are supported
 
   <FEEDBACK>
           Feedback from -1 to 1
@@ -570,13 +571,13 @@ Arguments:
           WAV file to process
 
   <LEFT_DELAY_MS>
-          Left-channel delay time in milliseconds
+          Left-channel delay time in milliseconds; fractional values are supported
 
   <LEFT_FEEDBACK>
           Left-channel feedback from -1 to 1
 
   <RIGHT_DELAY_MS>
-          Right-channel delay time in milliseconds
+          Right-channel delay time in milliseconds; fractional values are supported
 
   <RIGHT_FEEDBACK>
           Right-channel feedback from -1 to 1
@@ -614,7 +615,7 @@ Arguments:
           WAV file to process
 
   <DELAY_MS>
-          Delay time in milliseconds
+          Delay time in milliseconds; fractional values are supported
 
   <FEEDBACK>
           Feedback from -1 to 1
@@ -657,13 +658,13 @@ Arguments:
           WAV file to process
 
   <LEFT_DELAY_MS>
-          Left-channel delay time in milliseconds
+          Left-channel delay time in milliseconds; fractional values are supported
 
   <LEFT_FEEDBACK>
           Left-channel feedback from -1 to 1
 
   <RIGHT_DELAY_MS>
-          Right-channel delay time in milliseconds
+          Right-channel delay time in milliseconds; fractional values are supported
 
   <RIGHT_FEEDBACK>
           Right-channel feedback from -1 to 1
@@ -689,6 +690,39 @@ Options:
           Feedback low-pass cutoff in Hz
 
           [default: 2000]
+
+  -h, --help
+          Print help
+```
+
+## `wavlab reverb`
+
+```text
+Apply a classic Schroeder algorithmic reverb
+
+Usage: wavlab reverb [OPTIONS] <INPUT> <ROOM_SIZE> <DECAY_SECONDS> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <ROOM_SIZE>
+          Normalized room size from 0 (small) to 1 (large)
+
+  <DECAY_SECONDS>
+          RT60 decay time in seconds
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --tail-ms <TAIL_MS>
+          Additional output tail in milliseconds
+
+          [default: 0]
 
   -h, --help
           Print help

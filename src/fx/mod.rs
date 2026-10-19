@@ -4,6 +4,7 @@ mod analog_delay;
 mod delay;
 mod digital_delay;
 mod error;
+mod reverb;
 mod tape_delay;
 mod tape_saturation;
 

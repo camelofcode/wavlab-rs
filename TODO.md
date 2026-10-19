@@ -43,7 +43,7 @@ name.
 - [x] `analog-delay-stereo`
 - [x] `tape-delay-mono`
 - [x] `tape-delay-stereo`
-- [ ] `reverb`
+- [x] `reverb`
 
 ## Generators
 

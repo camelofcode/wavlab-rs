@@ -1,23 +1,25 @@
 use std::fmt::{self, Display, Formatter};
 
 /// An error encountered while configuring a [`Delay`].
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DelayError {
     /// The sample rate must be greater than zero.
     InvalidSampleRate(u32),
+    /// A delay time must be finite and greater than zero.
+    InvalidDelayTime(f64),
     /// The requested delay resolves to fewer than one sample.
     DelayTooShort {
         /// The requested delay in milliseconds.
-        milliseconds: u32,
+        milliseconds: f64,
         /// The sample rate used for the conversion.
         sample_rate: u32,
     },
     /// The requested delay exceeds the configured maximum.
     DelayExceedsMaximum {
         /// The requested delay in milliseconds.
-        milliseconds: u32,
+        milliseconds: f64,
         /// The maximum delay in milliseconds.
-        maximum_milliseconds: u32,
+        maximum_milliseconds: f64,
     },
     /// The delay buffer size cannot be represented on this platform.
     SizeOverflow,
@@ -29,6 +31,10 @@ impl Display for DelayError {
             Self::InvalidSampleRate(sample_rate) => write!(
                 formatter,
                 "invalid delay sample rate {sample_rate}; it must be greater than zero"
+            ),
+            Self::InvalidDelayTime(milliseconds) => write!(
+                formatter,
+                "invalid delay time {milliseconds} ms; it must be finite and greater than zero"
             ),
             Self::DelayTooShort {
                 milliseconds,
@@ -64,14 +70,14 @@ impl std::error::Error for DelayError {}
 /// ```
 /// use wavlab::Delay;
 ///
-/// let mut delay = Delay::new(1_000, 250, 48_000)?;
+/// let mut delay = Delay::new(1_000.0, 250.0, 48_000)?;
 /// let output = delay.next_sample(1.0, 0.4, 0.5);
 /// # Ok::<(), wavlab::DelayError>(())
 /// ```
 #[derive(Clone, Debug)]
 pub struct Delay {
     sample_rate: u32,
-    maximum_milliseconds: u32,
+    maximum_milliseconds: f64,
     delay_samples: usize,
     write_position: usize,
     buffer: Vec<f64>,
@@ -82,8 +88,9 @@ impl Delay {
     ///
     /// `maximum_milliseconds` determines the allocated buffer size, while
     /// `initial_milliseconds` sets the initial distance between the write and
-    /// read positions. Both delays must resolve to at least one sample, and the
-    /// initial delay must not exceed the maximum.
+    /// read positions. Both values may contain fractional milliseconds and are
+    /// rounded to the nearest whole sample. Both delays must resolve to at
+    /// least one sample, and the initial delay must not exceed the maximum.
     ///
     /// # Errors
     ///
@@ -91,22 +98,21 @@ impl Delay {
     /// sample, an initial delay greater than the maximum, or a buffer size that
     /// cannot be represented on this platform.
     pub fn new(
-        maximum_milliseconds: u32,
-        initial_milliseconds: u32,
+        maximum_milliseconds: f64,
+        initial_milliseconds: f64,
         sample_rate: u32,
     ) -> Result<Self, DelayError> {
         if sample_rate == 0 {
             return Err(DelayError::InvalidSampleRate(sample_rate));
         }
-        if initial_milliseconds > maximum_milliseconds {
+        let maximum_samples = milliseconds_to_samples(maximum_milliseconds, sample_rate)?;
+        let delay_samples = milliseconds_to_samples(initial_milliseconds, sample_rate)?;
+        if initial_milliseconds > maximum_milliseconds || delay_samples > maximum_samples {
             return Err(DelayError::DelayExceedsMaximum {
                 milliseconds: initial_milliseconds,
                 maximum_milliseconds,
             });
         }
-
-        let maximum_samples = milliseconds_to_samples(maximum_milliseconds, sample_rate)?;
-        let delay_samples = milliseconds_to_samples(initial_milliseconds, sample_rate)?;
 
         Ok(Self {
             sample_rate,
@@ -124,15 +130,16 @@ impl Delay {
     /// Returns an error if `milliseconds` exceeds the configured maximum,
     /// resolves to fewer than one sample, or cannot be represented on this
     /// platform. The existing delay time is retained when an error occurs.
-    pub fn set_delay_time(&mut self, milliseconds: u32) -> Result<(), DelayError> {
-        if milliseconds > self.maximum_milliseconds {
+    pub fn set_delay_time(&mut self, milliseconds: f64) -> Result<(), DelayError> {
+        let delay_samples = milliseconds_to_samples(milliseconds, self.sample_rate)?;
+        if milliseconds > self.maximum_milliseconds || delay_samples > self.buffer.len() {
             return Err(DelayError::DelayExceedsMaximum {
                 milliseconds,
                 maximum_milliseconds: self.maximum_milliseconds,
             });
         }
 
-        self.delay_samples = milliseconds_to_samples(milliseconds, self.sample_rate)?;
+        self.delay_samples = delay_samples;
         Ok(())
     }
 
@@ -195,15 +202,22 @@ impl Delay {
     }
 }
 
-fn milliseconds_to_samples(milliseconds: u32, sample_rate: u32) -> Result<usize, DelayError> {
-    let samples = u64::from(milliseconds) * u64::from(sample_rate) / 1_000;
-    if samples == 0 {
+fn milliseconds_to_samples(milliseconds: f64, sample_rate: u32) -> Result<usize, DelayError> {
+    if !milliseconds.is_finite() || milliseconds <= 0.0 {
+        return Err(DelayError::InvalidDelayTime(milliseconds));
+    }
+
+    let samples = (milliseconds * f64::from(sample_rate) / 1_000.0).round();
+    if samples < 1.0 {
         return Err(DelayError::DelayTooShort {
             milliseconds,
             sample_rate,
         });
     }
-    usize::try_from(samples).map_err(|_| DelayError::SizeOverflow)
+    if samples > usize::MAX as f64 {
+        return Err(DelayError::SizeOverflow);
+    }
+    Ok(samples as usize)
 }
 
 fn mix_samples(input: f64, delayed: f64, mix: f64) -> f64 {
@@ -216,7 +230,7 @@ mod tests {
 
     #[test]
     fn delays_an_impulse_by_the_requested_time() {
-        let mut delay = Delay::new(10, 3, 1_000).unwrap();
+        let mut delay = Delay::new(10.0, 3.0, 1_000).unwrap();
         let input = [1.0, 0.0, 0.0, 0.0, 0.0];
         let output = input.map(|sample| delay.next_sample(sample, 0.0, 1.0));
 
@@ -225,7 +239,7 @@ mod tests {
 
     #[test]
     fn feeds_the_delayed_signal_back_into_the_buffer() {
-        let mut delay = Delay::new(10, 2, 1_000).unwrap();
+        let mut delay = Delay::new(10.0, 2.0, 1_000).unwrap();
         let input = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let output = input.map(|sample| delay.next_sample(sample, 0.5, 1.0));
 
@@ -234,7 +248,7 @@ mod tests {
 
     #[test]
     fn basic_processing_applies_wet_dry_mix() {
-        let mut delay = Delay::new(10, 2, 1_000).unwrap();
+        let mut delay = Delay::new(10.0, 2.0, 1_000).unwrap();
 
         assert_eq!(delay.next_sample(1.0, 0.0, 0.25), 0.75);
         assert_eq!(delay.next_sample(0.0, 0.0, 0.25), 0.0);
@@ -243,7 +257,7 @@ mod tests {
 
     #[test]
     fn applies_feedback_processing_and_wet_dry_mix() {
-        let mut delay = Delay::new(10, 2, 1_000).unwrap();
+        let mut delay = Delay::new(10.0, 2.0, 1_000).unwrap();
 
         assert_eq!(delay.next_sample_with(1.0, 0.5, 0.25, |value| -value), 0.75);
         assert_eq!(delay.next_sample_with(0.0, 0.5, 0.25, |value| -value), 0.0);
@@ -257,7 +271,7 @@ mod tests {
 
     #[test]
     fn an_offset_shortens_the_effective_delay() {
-        let mut delay = Delay::new(10, 4, 1_000).unwrap();
+        let mut delay = Delay::new(10.0, 4.0, 1_000).unwrap();
         let input = [1.0, 0.0, 0.0];
         let output = input.map(|sample| delay.next_sample_with_offset(sample, 2, 1.0));
 
@@ -266,9 +280,20 @@ mod tests {
 
     #[test]
     fn changes_delay_time_without_clearing_the_buffer() {
-        let mut delay = Delay::new(10, 4, 1_000).unwrap();
+        let mut delay = Delay::new(10.0, 4.0, 1_000).unwrap();
         assert_eq!(delay.next_sample(1.0, 0.0, 1.0), 0.0);
-        delay.set_delay_time(2).unwrap();
+        delay.set_delay_time(2.0).unwrap();
+        assert_eq!(delay.next_sample(0.0, 0.0, 1.0), 0.0);
+        assert_eq!(delay.next_sample(0.0, 0.0, 1.0), 1.0);
+    }
+
+    #[test]
+    fn supports_fractional_millisecond_times() {
+        let mut delay = Delay::new(4.0, 2.5, 1_000).unwrap();
+        assert_eq!(delay.delay_samples, 3);
+        assert_eq!(delay.next_sample(1.0, 0.0, 1.0), 0.0);
+        delay.set_delay_time(1.5).unwrap();
+        assert_eq!(delay.delay_samples, 2);
         assert_eq!(delay.next_sample(0.0, 0.0, 1.0), 0.0);
         assert_eq!(delay.next_sample(0.0, 0.0, 1.0), 1.0);
     }
@@ -276,20 +301,24 @@ mod tests {
     #[test]
     fn rejects_invalid_configuration_without_changing_the_delay() {
         assert_eq!(
-            Delay::new(10, 2, 0).unwrap_err(),
+            Delay::new(10.0, 2.0, 0).unwrap_err(),
             DelayError::InvalidSampleRate(0)
         );
         assert!(matches!(
-            Delay::new(10, 11, 1_000),
+            Delay::new(10.0, 11.0, 1_000),
             Err(DelayError::DelayExceedsMaximum { .. })
         ));
         assert!(matches!(
-            Delay::new(0, 0, 1_000),
-            Err(DelayError::DelayTooShort { .. })
+            Delay::new(0.0, 0.0, 1_000),
+            Err(DelayError::InvalidDelayTime(0.0))
+        ));
+        assert!(matches!(
+            Delay::new(f64::NAN, 2.0, 1_000),
+            Err(DelayError::InvalidDelayTime(value)) if value.is_nan()
         ));
 
-        let mut delay = Delay::new(10, 2, 1_000).unwrap();
-        assert!(delay.set_delay_time(11).is_err());
+        let mut delay = Delay::new(10.0, 2.0, 1_000).unwrap();
+        assert!(delay.set_delay_time(11.0).is_err());
         assert_eq!(delay.next_sample(1.0, 0.0, 1.0), 0.0);
         assert_eq!(delay.next_sample(0.0, 0.0, 1.0), 0.0);
         assert_eq!(delay.next_sample(0.0, 0.0, 1.0), 1.0);

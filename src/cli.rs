@@ -22,8 +22,8 @@ pub struct MonoDelayArgs {
     /// WAV file to process.
     pub input: PathBuf,
 
-    /// Delay time in milliseconds.
-    pub delay_ms: u32,
+    /// Delay time in milliseconds; fractional values are supported.
+    pub delay_ms: f64,
 
     /// Feedback from -1 to 1.
     #[arg(allow_hyphen_values = true)]
@@ -46,15 +46,15 @@ pub struct StereoDelayArgs {
     /// WAV file to process.
     pub input: PathBuf,
 
-    /// Left-channel delay time in milliseconds.
-    pub left_delay_ms: u32,
+    /// Left-channel delay time in milliseconds; fractional values are supported.
+    pub left_delay_ms: f64,
 
     /// Left-channel feedback from -1 to 1.
     #[arg(allow_hyphen_values = true)]
     pub left_feedback: f64,
 
-    /// Right-channel delay time in milliseconds.
-    pub right_delay_ms: u32,
+    /// Right-channel delay time in milliseconds; fractional values are supported.
+    pub right_delay_ms: f64,
 
     /// Right-channel feedback from -1 to 1.
     #[arg(allow_hyphen_values = true)]
@@ -332,6 +332,28 @@ pub enum Command {
         /// Feedback low-pass cutoff in Hz.
         #[arg(long, default_value_t = DEFAULT_DELAY_CUTOFF_HZ)]
         cutoff_hz: f64,
+    },
+
+    /// Apply a classic Schroeder algorithmic reverb.
+    Reverb {
+        /// WAV file to process.
+        input: PathBuf,
+
+        /// Normalized room size from 0 (small) to 1 (large).
+        room_size: f64,
+
+        /// RT60 decay time in seconds.
+        decay_seconds: f64,
+
+        /// Wet proportion from 0 (dry) to 1 (wet).
+        mix: f64,
+
+        /// Destination WAV file; defaults to overwriting the input file.
+        output: Option<PathBuf>,
+
+        /// Additional output tail in milliseconds.
+        #[arg(long, default_value_t = 0)]
+        tail_ms: u32,
     },
 
     /// Apply a peaking EQ boost or cut around a center frequency.

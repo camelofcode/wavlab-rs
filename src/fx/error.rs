@@ -13,6 +13,10 @@ pub enum EffectError {
     InvalidFeedback(f64),
     /// Wet/dry mix must be finite and between zero and one.
     InvalidMix(f64),
+    /// Reverb room size must be finite and between zero and one.
+    InvalidRoomSize(f64),
+    /// Reverb decay time must be finite and greater than zero.
+    InvalidDecayTime(f64),
     /// A low-pass cutoff must be finite and lie below the Nyquist frequency.
     InvalidCutoffFrequency {
         /// The requested cutoff frequency in Hz.
@@ -37,7 +41,15 @@ impl Display for EffectError {
             ),
             Self::InvalidMix(mix) => write!(
                 formatter,
-                "invalid delay mix {mix}; it must be finite and between 0 and 1"
+                "invalid effect mix {mix}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidRoomSize(room_size) => write!(
+                formatter,
+                "invalid reverb room size {room_size}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidDecayTime(decay_seconds) => write!(
+                formatter,
+                "invalid reverb decay time {decay_seconds} seconds; it must be finite and greater than zero"
             ),
             Self::InvalidCutoffFrequency {
                 cutoff_hz,
