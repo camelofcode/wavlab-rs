@@ -34,6 +34,16 @@ Commands:
   analog-delay-stereo     Apply a low-pass-filtered stereo delay with independent channel settings
   tape-delay-mono         Apply a saturated, low-pass-filtered delay to every input channel
   tape-delay-stereo       Apply a saturated stereo delay with independent channel settings
+  chorus-mono             Apply chorus using the same LFO settings for every input channel
+  chorus-stereo           Apply stereo chorus with independent left and right LFO settings
+  vibrato-mono            Apply fully wet chorus as vibrato using the same settings for every channel
+  vibrato-stereo          Apply stereo vibrato with independent left and right LFO settings
+  flanger-mono            Apply flanging using the same settings for every input channel
+  flanger-stereo          Apply stereo flanging with independent left and right settings
+  tremolo                 Apply LFO-controlled volume modulation
+  autopan                 Apply LFO-controlled panning and always output stereo
+  phaser-mono             Apply phasing using the same LFO settings for every input channel
+  phaser-stereo           Apply stereo phasing with independent left and right LFO settings
   reverb                  Apply a classic Schroeder algorithmic reverb
   eq-peak                 Apply a peaking EQ boost or cut around a center frequency
   eq-lowshelf             Apply a low-shelf EQ boost or cut
@@ -693,6 +703,366 @@ Options:
 
   -h, --help
           Print help
+```
+
+## `wavlab chorus-mono`
+
+```text
+Apply chorus using the same LFO settings for every input channel
+
+Usage: wavlab chorus-mono <INPUT> <DEPTH> <FREQUENCY_HZ> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DEPTH>
+          Normalized LFO depth from 0 (no modulation) to 1 (plus or minus 10 ms)
+
+  <FREQUENCY_HZ>
+          LFO frequency in Hz
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab chorus-stereo`
+
+```text
+Apply stereo chorus with independent left and right LFO settings
+
+Usage: wavlab chorus-stereo <INPUT> <LEFT_DEPTH> <LEFT_FREQUENCY_HZ> <RIGHT_DEPTH> <RIGHT_FREQUENCY_HZ> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <LEFT_DEPTH>
+          Normalized left LFO depth from 0 to 1
+
+  <LEFT_FREQUENCY_HZ>
+          Left LFO frequency in Hz
+
+  <RIGHT_DEPTH>
+          Normalized right LFO depth from 0 to 1
+
+  <RIGHT_FREQUENCY_HZ>
+          Right LFO frequency in Hz
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab vibrato-mono`
+
+```text
+Apply fully wet chorus as vibrato using the same settings for every channel
+
+Usage: wavlab vibrato-mono <INPUT> <DEPTH> <FREQUENCY_HZ> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DEPTH>
+          Normalized LFO depth from 0 (no modulation) to 1 (plus or minus 10 ms)
+
+  <FREQUENCY_HZ>
+          LFO frequency in Hz
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab vibrato-stereo`
+
+```text
+Apply stereo vibrato with independent left and right LFO settings
+
+Usage: wavlab vibrato-stereo <INPUT> <LEFT_DEPTH> <LEFT_FREQUENCY_HZ> <RIGHT_DEPTH> <RIGHT_FREQUENCY_HZ> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <LEFT_DEPTH>
+          Normalized left LFO depth from 0 to 1
+
+  <LEFT_FREQUENCY_HZ>
+          Left LFO frequency in Hz
+
+  <RIGHT_DEPTH>
+          Normalized right LFO depth from 0 to 1
+
+  <RIGHT_FREQUENCY_HZ>
+          Right LFO frequency in Hz
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab flanger-mono`
+
+```text
+Apply flanging using the same settings for every input channel
+
+Usage: wavlab flanger-mono <INPUT> <DEPTH> <FREQUENCY_HZ> <FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DEPTH>
+          Normalized depth from 0 (one-sample delay) to 1 (10 ms maximum delay)
+
+  <FREQUENCY_HZ>
+          Triangle-LFO frequency in Hz, from 0.1 to 10
+
+  <FEEDBACK>
+          Signed feedback from -0.95 to 0.95; negative values avoid the short-delay level boost
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab flanger-stereo`
+
+```text
+Apply stereo flanging with independent left and right settings
+
+Usage: wavlab flanger-stereo <INPUT> <LEFT_DEPTH> <LEFT_FREQUENCY_HZ> <LEFT_FEEDBACK> <RIGHT_DEPTH> <RIGHT_FREQUENCY_HZ> <RIGHT_FEEDBACK> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <LEFT_DEPTH>
+          Normalized left-channel depth from 0 to 1
+
+  <LEFT_FREQUENCY_HZ>
+          Left triangle-LFO frequency in Hz, from 0.1 to 10
+
+  <LEFT_FEEDBACK>
+          Signed left feedback from -0.95 to 0.95; negative values reduce short-delay level boosts
+
+  <RIGHT_DEPTH>
+          Normalized right-channel depth from 0 to 1
+
+  <RIGHT_FREQUENCY_HZ>
+          Right triangle-LFO frequency in Hz, from 0.1 to 10
+
+  <RIGHT_FEEDBACK>
+          Signed right feedback from -0.95 to 0.95; negative values reduce short-delay level boosts
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet)
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help
+```
+
+## `wavlab tremolo`
+
+```text
+Apply LFO-controlled volume modulation
+
+Usage: wavlab tremolo <INPUT> <DEPTH> <FREQUENCY_HZ> <WAVEFORM> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DEPTH>
+          Modulation depth from 0 (unchanged) to 1 (full range)
+
+  <FREQUENCY_HZ>
+          LFO frequency in Hz
+
+  <WAVEFORM>
+          LFO waveform
+
+          Possible values:
+          - sine:     Sine wave
+          - triangle: Triangle wave
+          - square:   Square wave
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `wavlab autopan`
+
+```text
+Apply LFO-controlled panning and always output stereo
+
+Usage: wavlab autopan <INPUT> <DEPTH> <FREQUENCY_HZ> <WAVEFORM> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DEPTH>
+          Modulation depth from 0 (unchanged) to 1 (full range)
+
+  <FREQUENCY_HZ>
+          LFO frequency in Hz
+
+  <WAVEFORM>
+          LFO waveform
+
+          Possible values:
+          - sine:     Sine wave
+          - triangle: Triangle wave
+          - square:   Square wave
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `wavlab phaser-mono`
+
+```text
+Apply phasing using the same LFO settings for every input channel
+
+Usage: wavlab phaser-mono [OPTIONS] <INPUT> <DEPTH> <FREQUENCY_HZ> <CENTER_FREQUENCY_HZ> <WAVEFORM> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <DEPTH>
+          Normalized sweep depth from 0 (fixed center) to 1 (plus or minus two octaves)
+
+  <FREQUENCY_HZ>
+          LFO frequency in Hz
+
+  <CENTER_FREQUENCY_HZ>
+          Center frequency of the sweep, in Hz
+
+  <WAVEFORM>
+          LFO waveform
+
+          Possible values:
+          - sine:     Sine wave
+          - triangle: Triangle wave
+          - square:   Square wave
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet); 0.5 produces the strongest notches
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --stages <STAGES>
+          Number of second-order all-pass filters connected in series
+
+          [default: 3]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `wavlab phaser-stereo`
+
+```text
+Apply stereo phasing with independent left and right LFO settings
+
+Usage: wavlab phaser-stereo [OPTIONS] <INPUT> <LEFT_DEPTH> <LEFT_FREQUENCY_HZ> <LEFT_CENTER_FREQUENCY_HZ> <LEFT_WAVEFORM> <RIGHT_DEPTH> <RIGHT_FREQUENCY_HZ> <RIGHT_CENTER_FREQUENCY_HZ> <RIGHT_WAVEFORM> <MIX> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <LEFT_DEPTH>
+          Normalized left-channel sweep depth from 0 to 1
+
+  <LEFT_FREQUENCY_HZ>
+          Left-channel LFO frequency in Hz
+
+  <LEFT_CENTER_FREQUENCY_HZ>
+          Left-channel center frequency in Hz
+
+  <LEFT_WAVEFORM>
+          Left-channel LFO waveform
+
+          Possible values:
+          - sine:     Sine wave
+          - triangle: Triangle wave
+          - square:   Square wave
+
+  <RIGHT_DEPTH>
+          Normalized right-channel sweep depth from 0 to 1
+
+  <RIGHT_FREQUENCY_HZ>
+          Right-channel LFO frequency in Hz
+
+  <RIGHT_CENTER_FREQUENCY_HZ>
+          Right-channel center frequency in Hz
+
+  <RIGHT_WAVEFORM>
+          Right-channel LFO waveform
+
+          Possible values:
+          - sine:     Sine wave
+          - triangle: Triangle wave
+          - square:   Square wave
+
+  <MIX>
+          Wet proportion from 0 (dry) to 1 (wet); 0.5 produces the strongest notches
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
+      --stages <STAGES>
+          Number of second-order all-pass filters connected in series
+
+          [default: 3]
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```
 
 ## `wavlab reverb`

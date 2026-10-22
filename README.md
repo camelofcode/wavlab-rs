@@ -110,6 +110,13 @@ not represent bundled third-party source code.
   Reverberation](https://aes.org/publications/elibrary/elibrary-page/?id=849),”
   *Journal of the Audio Engineering Society*, volume 10, issue 3, pages 219–223,
   July 1962. The reverb follows its parallel-comb, series-all-pass design.
+- AudioKit, “[Modulated Delay
+  Effects](https://www.audiokit.io/DunneAudioKit/documentation/dunneaudiokit/modulateddelayeffects),”
+  describing the delay ranges, LFO rates, wet/dry mixing, and feedback used by
+  chorus, flanger, and vibrato effects.
+- JUCE, “[Phaser](https://docs.juce.com/master/classjuce_1_1dsp_1_1Phaser.html),”
+  describing a multi-stage, LFO-modulated all-pass phaser and its standard
+  depth, center-frequency, feedback, rate, and mix controls.
 
 ## License
 

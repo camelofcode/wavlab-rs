@@ -36,7 +36,13 @@ mod tools;
 mod wav_file;
 
 pub use eq::Eq;
-pub use fx::{DEFAULT_DELAY_CUTOFF_HZ, DelayChannelSettings, EffectError};
+pub use fx::{
+    AutoPanSettings, CHORUS_CENTER_DELAY_MILLISECONDS, ChorusChannelSettings,
+    DEFAULT_DELAY_CUTOFF_HZ, DEFAULT_PHASER_STAGES, DelayChannelSettings, EffectError,
+    FlangerChannelSettings, MAX_CHORUS_DEPTH_MILLISECONDS, MAX_FLANGER_DELAY_MILLISECONDS,
+    MAX_FLANGER_FEEDBACK, MAX_FLANGER_FREQUENCY_HZ, MAX_PHASER_STAGES, MAX_PHASER_SWEEP_OCTAVES,
+    MIN_FLANGER_FREQUENCY_HZ, PhaserChannelSettings, TremoloSettings, VibratoChannelSettings,
+};
 pub use generators::GeneratorError;
-pub use tools::{Delay, DelayError, Lfo, ProcessingError};
+pub use tools::{Delay, DelayError, Lfo, LfoWaveform, ProcessingError};
 pub use wav_file::{WavError, WavFile};

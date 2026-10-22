@@ -1,4 +1,5 @@
 mod combine;
+pub(crate) mod conversions;
 mod delay;
 mod error;
 mod flip_phase;
@@ -12,4 +13,4 @@ mod swap_channels;
 
 pub use delay::{Delay, DelayError};
 pub use error::ProcessingError;
-pub use lfo::Lfo;
+pub use lfo::{Lfo, LfoWaveform};

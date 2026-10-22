@@ -13,6 +13,31 @@ pub enum EffectError {
     InvalidFeedback(f64),
     /// Wet/dry mix must be finite and between zero and one.
     InvalidMix(f64),
+    /// Chorus depth must be finite and between zero and one.
+    InvalidChorusDepth(f64),
+    /// An LFO frequency must be finite and non-negative.
+    InvalidLfoFrequency(f64),
+    /// Flanger depth must be finite and between zero and one.
+    InvalidFlangerDepth(f64),
+    /// Flanger LFO frequency must be between 0.1 and 10 Hz.
+    InvalidFlangerFrequency(f64),
+    /// Flanger feedback must be finite and between -0.95 and 0.95.
+    InvalidFlangerFeedback(f64),
+    /// Tremolo depth must be finite and between zero and one.
+    InvalidTremoloDepth(f64),
+    /// Automatic-panning depth must be finite and between zero and one.
+    InvalidAutoPanDepth(f64),
+    /// Phaser depth must be finite and between zero and one.
+    InvalidPhaserDepth(f64),
+    /// Phaser center frequency must be finite and lie below Nyquist.
+    InvalidPhaserCenterFrequency {
+        /// The requested center frequency in Hz.
+        center_frequency_hz: f64,
+        /// The sample rate used to calculate the Nyquist frequency.
+        sample_rate: u32,
+    },
+    /// A phaser must contain a supported number of all-pass stages.
+    InvalidPhaserStages(usize),
     /// Reverb room size must be finite and between zero and one.
     InvalidRoomSize(f64),
     /// Reverb decay time must be finite and greater than zero.
@@ -42,6 +67,51 @@ impl Display for EffectError {
             Self::InvalidMix(mix) => write!(
                 formatter,
                 "invalid effect mix {mix}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidChorusDepth(depth) => write!(
+                formatter,
+                "invalid chorus depth {depth}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidLfoFrequency(frequency_hz) => write!(
+                formatter,
+                "invalid LFO frequency {frequency_hz} Hz; it must be finite and non-negative"
+            ),
+            Self::InvalidFlangerDepth(depth) => write!(
+                formatter,
+                "invalid flanger depth {depth}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidFlangerFrequency(frequency_hz) => write!(
+                formatter,
+                "invalid flanger LFO frequency {frequency_hz} Hz; it must be finite and between 0.1 and 10 Hz"
+            ),
+            Self::InvalidFlangerFeedback(feedback) => write!(
+                formatter,
+                "invalid flanger feedback {feedback}; it must be finite and between -0.95 and 0.95"
+            ),
+            Self::InvalidTremoloDepth(depth) => write!(
+                formatter,
+                "invalid tremolo depth {depth}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidAutoPanDepth(depth) => write!(
+                formatter,
+                "invalid autopan depth {depth}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidPhaserDepth(depth) => write!(
+                formatter,
+                "invalid phaser depth {depth}; it must be finite and between 0 and 1"
+            ),
+            Self::InvalidPhaserCenterFrequency {
+                center_frequency_hz,
+                sample_rate,
+            } => write!(
+                formatter,
+                "invalid phaser center frequency {center_frequency_hz} Hz; it must be finite, greater than zero, and below {} Hz",
+                f64::from(*sample_rate) / 2.0
+            ),
+            Self::InvalidPhaserStages(stages) => write!(
+                formatter,
+                "invalid phaser stage count {stages}; it must be between 1 and {}",
+                super::phaser::MAX_PHASER_STAGES
             ),
             Self::InvalidRoomSize(room_size) => write!(
                 formatter,
