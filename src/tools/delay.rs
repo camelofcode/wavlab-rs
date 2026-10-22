@@ -1,5 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
+use super::conversions::milliseconds_to_samples;
+
 /// An error encountered while configuring a [`Delay`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DelayError {
@@ -184,8 +186,26 @@ impl Delay {
     /// proportion, as in [`Delay::next_sample_with`]. No feedback is applied.
     #[must_use]
     pub fn next_sample_with_offset(&mut self, sample: f64, offset_samples: usize, mix: f64) -> f64 {
+        self.next_sample_with_offset_and_feedback(sample, offset_samples, 0.0, mix)
+    }
+
+    /// Processes one sample using a temporary delay offset and feedback.
+    ///
+    /// The non-negative `offset_samples` shortens the effective delay, as in
+    /// [`Delay::next_sample_with_offset`]. `feedback` scales the sample read at
+    /// that modulated position before adding it to the delay-line input.
+    /// Magnitudes below `1.0` decay; values at or above `1.0` can sustain or
+    /// grow without bound. `mix` controls the wet/dry output proportion.
+    #[must_use]
+    pub fn next_sample_with_offset_and_feedback(
+        &mut self,
+        sample: f64,
+        offset_samples: usize,
+        feedback: f64,
+        mix: f64,
+    ) -> f64 {
         let output = self.delayed_sample(offset_samples);
-        self.buffer[self.write_position] = sample;
+        self.buffer[self.write_position] = sample + feedback * output;
         self.advance();
         mix_samples(sample, output, mix)
     }
@@ -200,24 +220,6 @@ impl Delay {
     fn advance(&mut self) {
         self.write_position = (self.write_position + 1) % self.buffer.len();
     }
-}
-
-fn milliseconds_to_samples(milliseconds: f64, sample_rate: u32) -> Result<usize, DelayError> {
-    if !milliseconds.is_finite() || milliseconds <= 0.0 {
-        return Err(DelayError::InvalidDelayTime(milliseconds));
-    }
-
-    let samples = (milliseconds * f64::from(sample_rate) / 1_000.0).round();
-    if samples < 1.0 {
-        return Err(DelayError::DelayTooShort {
-            milliseconds,
-            sample_rate,
-        });
-    }
-    if samples > usize::MAX as f64 {
-        return Err(DelayError::SizeOverflow);
-    }
-    Ok(samples as usize)
 }
 
 fn mix_samples(input: f64, delayed: f64, mix: f64) -> f64 {
@@ -276,6 +278,16 @@ mod tests {
         let output = input.map(|sample| delay.next_sample_with_offset(sample, 2, 1.0));
 
         assert_eq!(output, [0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn an_offset_delay_can_feed_the_modulated_sample_back() {
+        let mut delay = Delay::new(10.0, 4.0, 1_000).unwrap();
+        let input = [1.0, 0.0, 0.0, 0.0, 0.0];
+        let output =
+            input.map(|sample| delay.next_sample_with_offset_and_feedback(sample, 2, 0.5, 1.0));
+
+        assert_eq!(output, [0.0, 0.0, 1.0, 0.0, 0.5]);
     }
 
     #[test]

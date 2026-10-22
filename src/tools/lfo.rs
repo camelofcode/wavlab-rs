@@ -1,6 +1,17 @@
 use std::f64::consts::PI;
 
-/// A stateful unipolar sine low-frequency oscillator.
+/// A waveform produced by an [`Lfo`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LfoWaveform {
+    /// A smooth unipolar sine wave.
+    Sine,
+    /// A linear rise and fall between the range endpoints.
+    Triangle,
+    /// A square wave alternating between the range endpoints.
+    Square,
+}
+
+/// A stateful unipolar low-frequency oscillator.
 ///
 /// `Lfo` produces values in a configured range and is intended for modulating
 /// effect parameters such as delay time, gain, or filter frequency. Call
@@ -12,9 +23,9 @@ use std::f64::consts::PI;
 /// # Example
 ///
 /// ```
-/// use wavlab::Lfo;
+/// use wavlab::{Lfo, LfoWaveform};
 ///
-/// let mut lfo = Lfo::new(48_000, 0.5, 0.5, 5.0);
+/// let mut lfo = Lfo::new(48_000, 0.5, 0.5, 5.0, LfoWaveform::Sine);
 /// let modulation = lfo.next_sample();
 /// assert_eq!(modulation, 0.5);
 /// ```
@@ -24,22 +35,29 @@ pub struct Lfo {
     radians_per_sample: f64,
     minimum: f64,
     range: f64,
+    waveform: LfoWaveform,
 }
 
 impl Lfo {
-    /// Creates an oscillator with the requested frequency and output range.
+    /// Creates an oscillator with the requested waveform, frequency, and range.
     ///
     /// `frequency_hz` is the frequency of the unipolar output and must be
     /// finite and non-negative. `minimum` and `maximum` are inclusive bounds;
     /// both and their difference must be finite, and `minimum` must not exceed
-    /// `maximum`.
+    /// `maximum`. All waveforms begin at `minimum`.
     ///
     /// # Panics
     ///
     /// Panics if `sample_rate` is zero, `frequency_hz` is negative or not
     /// finite, either range bound or their difference is not finite, or
     /// `minimum` exceeds `maximum`.
-    pub fn new(sample_rate: u32, frequency_hz: f64, minimum: f64, maximum: f64) -> Self {
+    pub fn new(
+        sample_rate: u32,
+        frequency_hz: f64,
+        minimum: f64,
+        maximum: f64,
+        waveform: LfoWaveform,
+    ) -> Self {
         assert!(sample_rate > 0, "LFO sample rate must be greater than zero");
         assert!(
             frequency_hz.is_finite() && frequency_hz >= 0.0,
@@ -56,17 +74,21 @@ impl Lfo {
             radians_per_sample: PI * frequency_hz / f64::from(sample_rate),
             minimum,
             range,
+            waveform,
         }
     }
 
     /// Returns the current oscillator value and advances it by one sample.
     ///
-    /// The internal waveform is the absolute value of a sine wave, scaled to
-    /// the inclusive range supplied to [`Lfo::new`]. The first value is the
-    /// configured minimum.
+    /// The selected unipolar waveform is scaled to the inclusive range supplied
+    /// at construction. The first value is the configured minimum.
     #[must_use]
     pub fn next_sample(&mut self) -> f64 {
-        let normalized = self.phase.sin().abs();
+        let normalized = match self.waveform {
+            LfoWaveform::Sine => self.phase.sin().abs(),
+            LfoWaveform::Triangle => 1.0 - (2.0 * self.phase / PI - 1.0).abs(),
+            LfoWaveform::Square => f64::from(self.phase >= PI / 2.0),
+        };
         self.phase = (self.phase + self.radians_per_sample).rem_euclid(PI);
         self.minimum + normalized * self.range
     }
@@ -76,11 +98,11 @@ impl Lfo {
 mod tests {
     use std::f64::consts::FRAC_1_SQRT_2;
 
-    use super::Lfo;
+    use super::{Lfo, LfoWaveform};
 
     #[test]
     fn produces_one_unipolar_cycle_at_the_requested_frequency() {
-        let mut lfo = Lfo::new(8, 1.0, 10.0, 20.0);
+        let mut lfo = Lfo::new(8, 1.0, 10.0, 20.0, LfoWaveform::Sine);
         let samples = (0..8).map(|_| lfo.next_sample()).collect::<Vec<_>>();
 
         let expected = [
@@ -102,21 +124,51 @@ mod tests {
 
     #[test]
     fn zero_frequency_stays_at_the_initial_value() {
-        let mut lfo = Lfo::new(48_000, 0.0, -1.0, 1.0);
+        let mut lfo = Lfo::new(48_000, 0.0, -1.0, 1.0, LfoWaveform::Sine);
 
         assert!((0..16).all(|_| lfo.next_sample() == -1.0));
     }
 
     #[test]
+    fn produces_a_unipolar_triangle_cycle() {
+        let mut lfo = Lfo::new(8, 1.0, 10.0, 20.0, LfoWaveform::Triangle);
+        let samples = (0..8).map(|_| lfo.next_sample()).collect::<Vec<_>>();
+
+        assert_eq!(samples, [10.0, 12.5, 15.0, 17.5, 20.0, 17.5, 15.0, 12.5]);
+        assert_eq!(lfo.next_sample(), 10.0);
+    }
+
+    #[test]
+    fn explicitly_selects_sine_triangle_and_square_waveforms() {
+        let collect = |waveform| {
+            let mut lfo = Lfo::new(4, 1.0, 0.0, 1.0, waveform);
+            (0..4).map(|_| lfo.next_sample()).collect::<Vec<_>>()
+        };
+
+        let sine = collect(LfoWaveform::Sine);
+        let expected_sine = [
+            0.0,
+            std::f64::consts::FRAC_1_SQRT_2,
+            1.0,
+            std::f64::consts::FRAC_1_SQRT_2,
+        ];
+        for (&actual, &expected) in sine.iter().zip(&expected_sine) {
+            assert!((actual - expected).abs() < 1e-12);
+        }
+        assert_eq!(collect(LfoWaveform::Triangle), [0.0, 0.5, 1.0, 0.5]);
+        assert_eq!(collect(LfoWaveform::Square), [0.0, 0.0, 1.0, 1.0]);
+    }
+
+    #[test]
     #[should_panic(expected = "LFO sample rate must be greater than zero")]
     fn rejects_a_zero_sample_rate() {
-        let _ = Lfo::new(0, 1.0, 0.0, 1.0);
+        let _ = Lfo::new(0, 1.0, 0.0, 1.0, LfoWaveform::Sine);
     }
 
     #[test]
     #[should_panic(expected = "LFO frequency must be finite and non-negative")]
     fn rejects_an_invalid_frequency() {
-        let _ = Lfo::new(48_000, f64::NAN, 0.0, 1.0);
+        let _ = Lfo::new(48_000, f64::NAN, 0.0, 1.0, LfoWaveform::Sine);
     }
 
     #[test]
@@ -124,6 +176,6 @@ mod tests {
         expected = "LFO range must have finite bounds with minimum no greater than maximum"
     )]
     fn rejects_an_invalid_range() {
-        let _ = Lfo::new(48_000, 1.0, 2.0, 1.0);
+        let _ = Lfo::new(48_000, 1.0, 2.0, 1.0, LfoWaveform::Sine);
     }
 }

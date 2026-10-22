@@ -23,6 +23,20 @@ impl Eq {
             set_pass_denominator(coefficients);
         })
     }
+
+    /// Updates this filter's all-pass coefficients without clearing its delay state.
+    ///
+    /// This is useful for continuously modulated filters: the previous input
+    /// and output samples remain intact while the phase-transition frequency
+    /// moves. The arguments have the same requirements as [`Eq::all_pass`].
+    pub fn set_all_pass(&mut self, center_frequency: f64, sample_rate: u32, bandwidth: f64) {
+        let updated = Self::all_pass(center_frequency, sample_rate, bandwidth);
+        self.b0a0 = updated.b0a0;
+        self.b1a0 = updated.b1a0;
+        self.b2a0 = updated.b2a0;
+        self.a1a0 = updated.a1a0;
+        self.a2a0 = updated.a2a0;
+    }
 }
 
 impl WavFile {
@@ -47,5 +61,21 @@ impl WavFile {
         bandwidth: f64,
     ) -> Result<(), WavError> {
         self.apply_eq(|sample_rate| Eq::all_pass(center_frequency, sample_rate, bandwidth))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Eq;
+
+    #[test]
+    fn updating_coefficients_preserves_filter_state() {
+        let mut filter = Eq::all_pass(1_000.0, 48_000, 1.0);
+        let _ = filter.process_sample(0.75);
+        let state = (filter.in1, filter.in2, filter.out1, filter.out2);
+
+        filter.set_all_pass(2_000.0, 48_000, 1.0);
+
+        assert_eq!((filter.in1, filter.in2, filter.out1, filter.out2), state);
     }
 }

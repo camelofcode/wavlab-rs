@@ -3,9 +3,30 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 
-use crate::DEFAULT_DELAY_CUTOFF_HZ;
+use crate::{DEFAULT_DELAY_CUTOFF_HZ, DEFAULT_PHASER_STAGES, LfoWaveform};
+
+/// LFO waveform accepted by modulation-effect CLI commands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum LfoWaveformArg {
+    /// Sine wave.
+    Sine,
+    /// Triangle wave.
+    Triangle,
+    /// Square wave.
+    Square,
+}
+
+impl From<LfoWaveformArg> for LfoWaveform {
+    fn from(waveform: LfoWaveformArg) -> Self {
+        match waveform {
+            LfoWaveformArg::Sine => Self::Sine,
+            LfoWaveformArg::Triangle => Self::Triangle,
+            LfoWaveformArg::Square => Self::Square,
+        }
+    }
+}
 
 /// The `wavlab` command-line interface.
 #[derive(Debug, Parser)]
@@ -69,6 +90,237 @@ pub struct StereoDelayArgs {
     /// Additional output tail in milliseconds.
     #[arg(long, default_value_t = 0)]
     pub tail_ms: u32,
+}
+
+/// Arguments for chorus using one setting for every input channel.
+#[derive(Debug, Args)]
+pub struct MonoChorusArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized LFO depth from 0 (no modulation) to 1 (plus or minus 10 ms).
+    pub depth: f64,
+
+    /// LFO frequency in Hz.
+    pub frequency_hz: f64,
+
+    /// Wet proportion from 0 (dry) to 1 (wet).
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments for stereo chorus with independent channel settings.
+#[derive(Debug, Args)]
+pub struct StereoChorusArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized left LFO depth from 0 to 1.
+    pub left_depth: f64,
+
+    /// Left LFO frequency in Hz.
+    pub left_frequency_hz: f64,
+
+    /// Normalized right LFO depth from 0 to 1.
+    pub right_depth: f64,
+
+    /// Right LFO frequency in Hz.
+    pub right_frequency_hz: f64,
+
+    /// Wet proportion from 0 (dry) to 1 (wet).
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments for vibrato using one setting for every input channel.
+#[derive(Debug, Args)]
+pub struct MonoVibratoArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized LFO depth from 0 (no modulation) to 1 (plus or minus 10 ms).
+    pub depth: f64,
+
+    /// LFO frequency in Hz.
+    pub frequency_hz: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments for stereo vibrato with independent channel settings.
+#[derive(Debug, Args)]
+pub struct StereoVibratoArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized left LFO depth from 0 to 1.
+    pub left_depth: f64,
+
+    /// Left LFO frequency in Hz.
+    pub left_frequency_hz: f64,
+
+    /// Normalized right LFO depth from 0 to 1.
+    pub right_depth: f64,
+
+    /// Right LFO frequency in Hz.
+    pub right_frequency_hz: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments for flanging using one setting for every input channel.
+#[derive(Debug, Args)]
+pub struct MonoFlangerArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized depth from 0 (one-sample delay) to 1 (10 ms maximum delay).
+    pub depth: f64,
+
+    /// Triangle-LFO frequency in Hz, from 0.1 to 10.
+    pub frequency_hz: f64,
+
+    /// Signed feedback from -0.95 to 0.95; negative values avoid the short-delay level boost.
+    #[arg(allow_hyphen_values = true)]
+    pub feedback: f64,
+
+    /// Wet proportion from 0 (dry) to 1 (wet).
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments for stereo flanging with independent channel settings.
+#[derive(Debug, Args)]
+pub struct StereoFlangerArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized left-channel depth from 0 to 1.
+    pub left_depth: f64,
+
+    /// Left triangle-LFO frequency in Hz, from 0.1 to 10.
+    pub left_frequency_hz: f64,
+
+    /// Signed left feedback from -0.95 to 0.95; negative values reduce short-delay level boosts.
+    #[arg(allow_hyphen_values = true)]
+    pub left_feedback: f64,
+
+    /// Normalized right-channel depth from 0 to 1.
+    pub right_depth: f64,
+
+    /// Right triangle-LFO frequency in Hz, from 0.1 to 10.
+    pub right_frequency_hz: f64,
+
+    /// Signed right feedback from -0.95 to 0.95; negative values reduce short-delay level boosts.
+    #[arg(allow_hyphen_values = true)]
+    pub right_feedback: f64,
+
+    /// Wet proportion from 0 (dry) to 1 (wet).
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments shared by tremolo and automatic-panning commands.
+#[derive(Debug, Args)]
+pub struct LfoEffectArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Modulation depth from 0 (unchanged) to 1 (full range).
+    pub depth: f64,
+
+    /// LFO frequency in Hz.
+    pub frequency_hz: f64,
+
+    /// LFO waveform.
+    #[arg(value_enum)]
+    pub waveform: LfoWaveformArg,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments for a phaser using one setting for every input channel.
+#[derive(Debug, Args)]
+pub struct MonoPhaserArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized sweep depth from 0 (fixed center) to 1 (plus or minus two octaves).
+    pub depth: f64,
+
+    /// LFO frequency in Hz.
+    pub frequency_hz: f64,
+
+    /// Center frequency of the sweep, in Hz.
+    pub center_frequency_hz: f64,
+
+    /// LFO waveform.
+    #[arg(value_enum)]
+    pub waveform: LfoWaveformArg,
+
+    /// Wet proportion from 0 (dry) to 1 (wet); 0.5 produces the strongest notches.
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+
+    /// Number of second-order all-pass filters connected in series.
+    #[arg(long, default_value_t = DEFAULT_PHASER_STAGES)]
+    pub stages: usize,
+}
+
+/// Arguments for a stereo phaser with independent channel settings.
+#[derive(Debug, Args)]
+pub struct StereoPhaserArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Normalized left-channel sweep depth from 0 to 1.
+    pub left_depth: f64,
+
+    /// Left-channel LFO frequency in Hz.
+    pub left_frequency_hz: f64,
+
+    /// Left-channel center frequency in Hz.
+    pub left_center_frequency_hz: f64,
+
+    /// Left-channel LFO waveform.
+    #[arg(value_enum)]
+    pub left_waveform: LfoWaveformArg,
+
+    /// Normalized right-channel sweep depth from 0 to 1.
+    pub right_depth: f64,
+
+    /// Right-channel LFO frequency in Hz.
+    pub right_frequency_hz: f64,
+
+    /// Right-channel center frequency in Hz.
+    pub right_center_frequency_hz: f64,
+
+    /// Right-channel LFO waveform.
+    #[arg(value_enum)]
+    pub right_waveform: LfoWaveformArg,
+
+    /// Wet proportion from 0 (dry) to 1 (wet); 0.5 produces the strongest notches.
+    pub mix: f64,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+
+    /// Number of second-order all-pass filters connected in series.
+    #[arg(long, default_value_t = DEFAULT_PHASER_STAGES)]
+    pub stages: usize,
 }
 
 /// An operation supported by the `wavlab` executable.
@@ -333,6 +585,36 @@ pub enum Command {
         #[arg(long, default_value_t = DEFAULT_DELAY_CUTOFF_HZ)]
         cutoff_hz: f64,
     },
+
+    /// Apply chorus using the same LFO settings for every input channel.
+    ChorusMono(MonoChorusArgs),
+
+    /// Apply stereo chorus with independent left and right LFO settings.
+    ChorusStereo(StereoChorusArgs),
+
+    /// Apply fully wet chorus as vibrato using the same settings for every channel.
+    VibratoMono(MonoVibratoArgs),
+
+    /// Apply stereo vibrato with independent left and right LFO settings.
+    VibratoStereo(StereoVibratoArgs),
+
+    /// Apply flanging using the same settings for every input channel.
+    FlangerMono(MonoFlangerArgs),
+
+    /// Apply stereo flanging with independent left and right settings.
+    FlangerStereo(StereoFlangerArgs),
+
+    /// Apply LFO-controlled volume modulation.
+    Tremolo(LfoEffectArgs),
+
+    /// Apply LFO-controlled panning and always output stereo.
+    Autopan(LfoEffectArgs),
+
+    /// Apply phasing using the same LFO settings for every input channel.
+    PhaserMono(MonoPhaserArgs),
+
+    /// Apply stereo phasing with independent left and right LFO settings.
+    PhaserStereo(StereoPhaserArgs),
 
     /// Apply a classic Schroeder algorithmic reverb.
     Reverb {

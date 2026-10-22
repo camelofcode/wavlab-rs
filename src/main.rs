@@ -2,8 +2,16 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::Parser;
-use wavlab::cli::{Cli, Command, MonoDelayArgs, StereoDelayArgs};
-use wavlab::{DelayChannelSettings, EffectError, GeneratorError, WavError, WavFile};
+use wavlab::cli::{
+    Cli, Command, LfoEffectArgs, MonoChorusArgs, MonoDelayArgs, MonoFlangerArgs, MonoPhaserArgs,
+    MonoVibratoArgs, StereoChorusArgs, StereoDelayArgs, StereoFlangerArgs, StereoPhaserArgs,
+    StereoVibratoArgs,
+};
+use wavlab::{
+    AutoPanSettings, ChorusChannelSettings, DelayChannelSettings, EffectError,
+    FlangerChannelSettings, GeneratorError, PhaserChannelSettings, TremoloSettings,
+    VibratoChannelSettings, WavError, WavFile,
+};
 
 type CliResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -263,6 +271,181 @@ fn run(cli: Cli) -> CliResult<()> {
                 )
             })?;
         }
+        Command::ChorusMono(chorus) => {
+            let MonoChorusArgs {
+                input,
+                depth,
+                frequency_hz,
+                mix,
+                output,
+            } = chorus;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.chorus(ChorusChannelSettings::new(depth, frequency_hz), mix)
+            })?;
+        }
+        Command::ChorusStereo(chorus) => {
+            let StereoChorusArgs {
+                input,
+                left_depth,
+                left_frequency_hz,
+                right_depth,
+                right_frequency_hz,
+                mix,
+                output,
+            } = chorus;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.chorus_stereo(
+                    ChorusChannelSettings::new(left_depth, left_frequency_hz),
+                    ChorusChannelSettings::new(right_depth, right_frequency_hz),
+                    mix,
+                )
+            })?;
+        }
+        Command::VibratoMono(vibrato) => {
+            let MonoVibratoArgs {
+                input,
+                depth,
+                frequency_hz,
+                output,
+            } = vibrato;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.vibrato(VibratoChannelSettings::new(depth, frequency_hz))
+            })?;
+        }
+        Command::VibratoStereo(vibrato) => {
+            let StereoVibratoArgs {
+                input,
+                left_depth,
+                left_frequency_hz,
+                right_depth,
+                right_frequency_hz,
+                output,
+            } = vibrato;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.vibrato_stereo(
+                    VibratoChannelSettings::new(left_depth, left_frequency_hz),
+                    VibratoChannelSettings::new(right_depth, right_frequency_hz),
+                )
+            })?;
+        }
+        Command::FlangerMono(flanger) => {
+            let MonoFlangerArgs {
+                input,
+                depth,
+                frequency_hz,
+                feedback,
+                mix,
+                output,
+            } = flanger;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.flanger(
+                    FlangerChannelSettings::new(depth, frequency_hz, feedback),
+                    mix,
+                )
+            })?;
+        }
+        Command::FlangerStereo(flanger) => {
+            let StereoFlangerArgs {
+                input,
+                left_depth,
+                left_frequency_hz,
+                left_feedback,
+                right_depth,
+                right_frequency_hz,
+                right_feedback,
+                mix,
+                output,
+            } = flanger;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.flanger_stereo(
+                    FlangerChannelSettings::new(left_depth, left_frequency_hz, left_feedback),
+                    FlangerChannelSettings::new(right_depth, right_frequency_hz, right_feedback),
+                    mix,
+                )
+            })?;
+        }
+        Command::Tremolo(tremolo) => {
+            let LfoEffectArgs {
+                input,
+                depth,
+                frequency_hz,
+                waveform,
+                output,
+            } = tremolo;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.tremolo(TremoloSettings::new(depth, frequency_hz, waveform.into()))
+            })?;
+        }
+        Command::Autopan(autopan) => {
+            let LfoEffectArgs {
+                input,
+                depth,
+                frequency_hz,
+                waveform,
+                output,
+            } = autopan;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.autopan(AutoPanSettings::new(depth, frequency_hz, waveform.into()))
+            })?;
+        }
+        Command::PhaserMono(phaser) => {
+            let MonoPhaserArgs {
+                input,
+                depth,
+                frequency_hz,
+                center_frequency_hz,
+                waveform,
+                mix,
+                output,
+                stages,
+            } = phaser;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.phaser(
+                    PhaserChannelSettings::new(
+                        depth,
+                        frequency_hz,
+                        center_frequency_hz,
+                        waveform.into(),
+                    ),
+                    stages,
+                    mix,
+                )
+            })?;
+        }
+        Command::PhaserStereo(phaser) => {
+            let StereoPhaserArgs {
+                input,
+                left_depth,
+                left_frequency_hz,
+                left_center_frequency_hz,
+                left_waveform,
+                right_depth,
+                right_frequency_hz,
+                right_center_frequency_hz,
+                right_waveform,
+                mix,
+                output,
+                stages,
+            } = phaser;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.phaser_stereo(
+                    PhaserChannelSettings::new(
+                        left_depth,
+                        left_frequency_hz,
+                        left_center_frequency_hz,
+                        left_waveform.into(),
+                    ),
+                    PhaserChannelSettings::new(
+                        right_depth,
+                        right_frequency_hz,
+                        right_center_frequency_hz,
+                        right_waveform.into(),
+                    ),
+                    stages,
+                    mix,
+                )
+            })?;
+        }
         Command::Reverb {
             input,
             room_size,
@@ -515,9 +698,18 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use clap::{CommandFactory, Parser};
-    use wavlab::{DelayChannelSettings, EffectError, WavError, WavFile, constants::MINUS_THREE_DB};
+    use wavlab::cli::LfoWaveformArg;
+    use wavlab::{
+        AutoPanSettings, ChorusChannelSettings, DelayChannelSettings, EffectError,
+        FlangerChannelSettings, LfoWaveform, PhaserChannelSettings, TremoloSettings,
+        VibratoChannelSettings, WavError, WavFile, constants::MINUS_THREE_DB,
+    };
 
-    use super::{Cli, Command, MonoDelayArgs, StereoDelayArgs, run};
+    use super::{
+        Cli, Command, LfoEffectArgs, MonoChorusArgs, MonoDelayArgs, MonoFlangerArgs,
+        MonoPhaserArgs, MonoVibratoArgs, StereoChorusArgs, StereoDelayArgs, StereoFlangerArgs,
+        StereoPhaserArgs, StereoVibratoArgs, run,
+    };
 
     static NEXT_TEST_FILE: AtomicU64 = AtomicU64::new(0);
 
@@ -1120,6 +1312,236 @@ mod tests {
     }
 
     #[test]
+    fn parses_chorus_commands() {
+        let mono = Cli::try_parse_from([
+            "wavlab",
+            "chorus-mono",
+            "in.wav",
+            "0.75",
+            "1.5",
+            "0.5",
+            "out.wav",
+        ])
+        .expect("valid mono chorus");
+        assert!(matches!(
+            mono.command,
+            Command::ChorusMono(MonoChorusArgs {
+                input,
+                depth: 0.75,
+                frequency_hz: 1.5,
+                mix: 0.5,
+                output: Some(output),
+            }) if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+
+        let stereo = Cli::try_parse_from([
+            "wavlab",
+            "chorus-stereo",
+            "in.wav",
+            "0.5",
+            "0.8",
+            "1",
+            "1.2",
+            "0.4",
+        ])
+        .expect("valid stereo chorus");
+        assert!(matches!(
+            stereo.command,
+            Command::ChorusStereo(StereoChorusArgs {
+                input,
+                left_depth: 0.5,
+                left_frequency_hz: 0.8,
+                right_depth: 1.0,
+                right_frequency_hz: 1.2,
+                mix: 0.4,
+                output: None,
+            }) if input == Path::new("in.wav")
+        ));
+    }
+
+    #[test]
+    fn parses_vibrato_commands() {
+        let mono =
+            Cli::try_parse_from(["wavlab", "vibrato-mono", "in.wav", "0.75", "5", "out.wav"])
+                .expect("valid mono vibrato");
+        assert!(matches!(
+            mono.command,
+            Command::VibratoMono(MonoVibratoArgs {
+                input,
+                depth: 0.75,
+                frequency_hz: 5.0,
+                output: Some(output),
+            }) if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+
+        let stereo =
+            Cli::try_parse_from(["wavlab", "vibrato-stereo", "in.wav", "0.5", "4", "1", "6"])
+                .expect("valid stereo vibrato");
+        assert!(matches!(
+            stereo.command,
+            Command::VibratoStereo(StereoVibratoArgs {
+                input,
+                left_depth: 0.5,
+                left_frequency_hz: 4.0,
+                right_depth: 1.0,
+                right_frequency_hz: 6.0,
+                output: None,
+            }) if input == Path::new("in.wav")
+        ));
+    }
+
+    #[test]
+    fn parses_flanger_commands() {
+        let mono = Cli::try_parse_from([
+            "wavlab",
+            "flanger-mono",
+            "in.wav",
+            "0.75",
+            "0.5",
+            "-0.7",
+            "0.5",
+            "out.wav",
+        ])
+        .expect("valid mono flanger");
+        assert!(matches!(
+            mono.command,
+            Command::FlangerMono(MonoFlangerArgs {
+                input,
+                depth: 0.75,
+                frequency_hz: 0.5,
+                feedback: -0.7,
+                mix: 0.5,
+                output: Some(output),
+            }) if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+
+        let stereo = Cli::try_parse_from([
+            "wavlab",
+            "flanger-stereo",
+            "in.wav",
+            "0.5",
+            "0.4",
+            "-0.6",
+            "1",
+            "0.7",
+            "0.5",
+            "0.5",
+        ])
+        .expect("valid stereo flanger");
+        assert!(matches!(
+            stereo.command,
+            Command::FlangerStereo(StereoFlangerArgs {
+                input,
+                left_depth: 0.5,
+                left_frequency_hz: 0.4,
+                left_feedback: -0.6,
+                right_depth: 1.0,
+                right_frequency_hz: 0.7,
+                right_feedback: 0.5,
+                mix: 0.5,
+                output: None,
+            }) if input == Path::new("in.wav")
+        ));
+    }
+
+    #[test]
+    fn parses_tremolo_and_autopan_commands() {
+        let tremolo = Cli::try_parse_from([
+            "wavlab", "tremolo", "in.wav", "0.75", "5", "triangle", "out.wav",
+        ])
+        .expect("valid tremolo");
+        assert!(matches!(
+            tremolo.command,
+            Command::Tremolo(LfoEffectArgs {
+                input,
+                depth: 0.75,
+                frequency_hz: 5.0,
+                waveform: LfoWaveformArg::Triangle,
+                output: Some(output),
+            }) if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+
+        let autopan = Cli::try_parse_from(["wavlab", "autopan", "in.wav", "1", "0.5", "square"])
+            .expect("valid autopan");
+        assert!(matches!(
+            autopan.command,
+            Command::Autopan(LfoEffectArgs {
+                input,
+                depth: 1.0,
+                frequency_hz: 0.5,
+                waveform: LfoWaveformArg::Square,
+                output: None,
+            }) if input == Path::new("in.wav")
+        ));
+
+        assert!(Cli::try_parse_from(["wavlab", "tremolo", "in.wav", "1", "5", "saw"]).is_err());
+    }
+
+    #[test]
+    fn parses_phaser_commands() {
+        let mono = Cli::try_parse_from([
+            "wavlab",
+            "phaser-mono",
+            "in.wav",
+            "0.75",
+            "0.5",
+            "1000",
+            "triangle",
+            "0.5",
+            "out.wav",
+            "--stages",
+            "4",
+        ])
+        .expect("valid mono phaser");
+        assert!(matches!(
+            mono.command,
+            Command::PhaserMono(MonoPhaserArgs {
+                input,
+                depth: 0.75,
+                frequency_hz: 0.5,
+                center_frequency_hz: 1_000.0,
+                waveform: LfoWaveformArg::Triangle,
+                mix: 0.5,
+                output: Some(output),
+                stages: 4,
+            }) if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+
+        let stereo = Cli::try_parse_from([
+            "wavlab",
+            "phaser-stereo",
+            "in.wav",
+            "0.5",
+            "0.4",
+            "800",
+            "sine",
+            "1",
+            "0.7",
+            "1200",
+            "square",
+            "0.5",
+        ])
+        .expect("valid stereo phaser");
+        assert!(matches!(
+            stereo.command,
+            Command::PhaserStereo(StereoPhaserArgs {
+                input,
+                left_depth: 0.5,
+                left_frequency_hz: 0.4,
+                left_center_frequency_hz: 800.0,
+                left_waveform: LfoWaveformArg::Sine,
+                right_depth: 1.0,
+                right_frequency_hz: 0.7,
+                right_center_frequency_hz: 1_200.0,
+                right_waveform: LfoWaveformArg::Square,
+                mix: 0.5,
+                output: None,
+                stages: 3,
+            }) if input == Path::new("in.wav")
+        ));
+    }
+
+    #[test]
     fn parses_reverb_command() {
         let reverb = Cli::try_parse_from([
             "wavlab",
@@ -1374,6 +1796,228 @@ mod tests {
                     1_500.0,
                     3.0,
                     2,
+                )
+            },
+        );
+    }
+
+    #[test]
+    fn chorus_commands_write_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("chorus-input");
+        save_mono_file(&input, vec![0.5; 1_500]);
+
+        let mono_output = files.path("chorus-mono-output");
+        assert_effect_command_matches(
+            &input,
+            &mono_output,
+            Command::ChorusMono(MonoChorusArgs {
+                input: input.clone(),
+                depth: 0.75,
+                frequency_hz: 1.5,
+                mix: 0.5,
+                output: Some(mono_output.clone()),
+            }),
+            |wav_file| wav_file.chorus(ChorusChannelSettings::new(0.75, 1.5), 0.5),
+        );
+
+        let stereo_output = files.path("chorus-stereo-output");
+        assert_effect_command_matches(
+            &input,
+            &stereo_output,
+            Command::ChorusStereo(StereoChorusArgs {
+                input: input.clone(),
+                left_depth: 0.5,
+                left_frequency_hz: 0.8,
+                right_depth: 1.0,
+                right_frequency_hz: 1.2,
+                mix: 0.4,
+                output: Some(stereo_output.clone()),
+            }),
+            |wav_file| {
+                wav_file.chorus_stereo(
+                    ChorusChannelSettings::new(0.5, 0.8),
+                    ChorusChannelSettings::new(1.0, 1.2),
+                    0.4,
+                )
+            },
+        );
+    }
+
+    #[test]
+    fn vibrato_commands_write_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("vibrato-input");
+        save_mono_file(&input, vec![0.5; 1_500]);
+
+        let mono_output = files.path("vibrato-mono-output");
+        assert_effect_command_matches(
+            &input,
+            &mono_output,
+            Command::VibratoMono(MonoVibratoArgs {
+                input: input.clone(),
+                depth: 0.75,
+                frequency_hz: 5.0,
+                output: Some(mono_output.clone()),
+            }),
+            |wav_file| wav_file.vibrato(VibratoChannelSettings::new(0.75, 5.0)),
+        );
+
+        let stereo_output = files.path("vibrato-stereo-output");
+        assert_effect_command_matches(
+            &input,
+            &stereo_output,
+            Command::VibratoStereo(StereoVibratoArgs {
+                input: input.clone(),
+                left_depth: 0.5,
+                left_frequency_hz: 4.0,
+                right_depth: 1.0,
+                right_frequency_hz: 6.0,
+                output: Some(stereo_output.clone()),
+            }),
+            |wav_file| {
+                wav_file.vibrato_stereo(
+                    VibratoChannelSettings::new(0.5, 4.0),
+                    VibratoChannelSettings::new(1.0, 6.0),
+                )
+            },
+        );
+    }
+
+    #[test]
+    fn flanger_commands_write_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("flanger-input");
+        save_mono_file(&input, vec![0.5; 1_500]);
+
+        let mono_output = files.path("flanger-mono-output");
+        assert_effect_command_matches(
+            &input,
+            &mono_output,
+            Command::FlangerMono(MonoFlangerArgs {
+                input: input.clone(),
+                depth: 0.75,
+                frequency_hz: 0.5,
+                feedback: -0.7,
+                mix: 0.5,
+                output: Some(mono_output.clone()),
+            }),
+            |wav_file| wav_file.flanger(FlangerChannelSettings::new(0.75, 0.5, -0.7), 0.5),
+        );
+
+        let stereo_output = files.path("flanger-stereo-output");
+        assert_effect_command_matches(
+            &input,
+            &stereo_output,
+            Command::FlangerStereo(StereoFlangerArgs {
+                input: input.clone(),
+                left_depth: 0.5,
+                left_frequency_hz: 0.4,
+                left_feedback: -0.6,
+                right_depth: 1.0,
+                right_frequency_hz: 0.7,
+                right_feedback: 0.5,
+                mix: 0.5,
+                output: Some(stereo_output.clone()),
+            }),
+            |wav_file| {
+                wav_file.flanger_stereo(
+                    FlangerChannelSettings::new(0.5, 0.4, -0.6),
+                    FlangerChannelSettings::new(1.0, 0.7, 0.5),
+                    0.5,
+                )
+            },
+        );
+    }
+
+    #[test]
+    fn tremolo_and_autopan_commands_write_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("lfo-effects-input");
+        save_mono_file(&input, vec![0.5; 1_500]);
+
+        let tremolo_output = files.path("tremolo-output");
+        assert_effect_command_matches(
+            &input,
+            &tremolo_output,
+            Command::Tremolo(LfoEffectArgs {
+                input: input.clone(),
+                depth: 0.75,
+                frequency_hz: 5.0,
+                waveform: LfoWaveformArg::Triangle,
+                output: Some(tremolo_output.clone()),
+            }),
+            |wav_file| wav_file.tremolo(TremoloSettings::new(0.75, 5.0, LfoWaveform::Triangle)),
+        );
+
+        let autopan_output = files.path("autopan-output");
+        assert_effect_command_matches(
+            &input,
+            &autopan_output,
+            Command::Autopan(LfoEffectArgs {
+                input: input.clone(),
+                depth: 1.0,
+                frequency_hz: 0.5,
+                waveform: LfoWaveformArg::Square,
+                output: Some(autopan_output.clone()),
+            }),
+            |wav_file| wav_file.autopan(AutoPanSettings::new(1.0, 0.5, LfoWaveform::Square)),
+        );
+    }
+
+    #[test]
+    fn phaser_commands_write_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("phaser-input");
+        save_mono_file(&input, vec![0.5; 1_500]);
+
+        let mono_output = files.path("phaser-mono-output");
+        assert_effect_command_matches(
+            &input,
+            &mono_output,
+            Command::PhaserMono(MonoPhaserArgs {
+                input: input.clone(),
+                depth: 0.75,
+                frequency_hz: 0.5,
+                center_frequency_hz: 1_000.0,
+                waveform: LfoWaveformArg::Triangle,
+                mix: 0.5,
+                output: Some(mono_output.clone()),
+                stages: 4,
+            }),
+            |wav_file| {
+                wav_file.phaser(
+                    PhaserChannelSettings::new(0.75, 0.5, 1_000.0, LfoWaveform::Triangle),
+                    4,
+                    0.5,
+                )
+            },
+        );
+
+        let stereo_output = files.path("phaser-stereo-output");
+        assert_effect_command_matches(
+            &input,
+            &stereo_output,
+            Command::PhaserStereo(StereoPhaserArgs {
+                input: input.clone(),
+                left_depth: 0.5,
+                left_frequency_hz: 0.4,
+                left_center_frequency_hz: 800.0,
+                left_waveform: LfoWaveformArg::Sine,
+                right_depth: 1.0,
+                right_frequency_hz: 0.7,
+                right_center_frequency_hz: 1_200.0,
+                right_waveform: LfoWaveformArg::Square,
+                mix: 0.5,
+                output: Some(stereo_output.clone()),
+                stages: 3,
+            }),
+            |wav_file| {
+                wav_file.phaser_stereo(
+                    PhaserChannelSettings::new(0.5, 0.4, 800.0, LfoWaveform::Sine),
+                    PhaserChannelSettings::new(1.0, 0.7, 1_200.0, LfoWaveform::Square),
+                    3,
+                    0.5,
                 )
             },
         );
