@@ -44,6 +44,7 @@ Commands:
   autopan                 Apply LFO-controlled panning and always output stereo
   phaser-mono             Apply phasing using the same LFO settings for every input channel
   phaser-stereo           Apply stereo phasing with independent left and right LFO settings
+  modulated-filter        Apply an LFO-modulated low-pass or high-pass filter
   reverb                  Apply a classic Schroeder algorithmic reverb
   eq-peak                 Apply a peaking EQ boost or cut around a center frequency
   eq-lowshelf             Apply a low-shelf EQ boost or cut
@@ -1061,6 +1062,52 @@ Options:
 
           [default: 3]
 
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+## `wavlab modulated-filter`
+
+```text
+Apply an LFO-modulated low-pass or high-pass filter
+
+Usage: wavlab modulated-filter <INPUT> <MINIMUM_FREQUENCY_HZ> <MAXIMUM_FREQUENCY_HZ> <FREQUENCY_HZ> <FILTER_TYPE> <WAVEFORM> <Q> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          WAV file to process
+
+  <MINIMUM_FREQUENCY_HZ>
+          Lowest cutoff reached by the sweep, in Hz
+
+  <MAXIMUM_FREQUENCY_HZ>
+          Highest cutoff reached by the sweep, in Hz
+
+  <FREQUENCY_HZ>
+          LFO frequency in Hz
+
+  <FILTER_TYPE>
+          Low-pass or high-pass filter response
+
+          Possible values:
+          - low-pass:  Pass frequencies below the moving cutoff
+          - high-pass: Pass frequencies above the moving cutoff
+
+  <WAVEFORM>
+          LFO waveform
+
+          Possible values:
+          - sine:     Sine wave
+          - triangle: Triangle wave
+          - square:   Square wave
+
+  <Q>
+          Filter Q controlling resonance around the moving cutoff
+
+  [OUTPUT]
+          Destination WAV file; defaults to overwriting the input file
+
+Options:
   -h, --help
           Print help (see a summary with '-h')
 ```

@@ -38,6 +38,17 @@ pub enum EffectError {
     },
     /// A phaser must contain a supported number of all-pass stages.
     InvalidPhaserStages(usize),
+    /// A modulated filter's cutoff range must be positive, ordered, and below Nyquist.
+    InvalidModulatedFilterFrequencyRange {
+        /// Lowest requested cutoff frequency in Hz.
+        minimum_frequency_hz: f64,
+        /// Highest requested cutoff frequency in Hz.
+        maximum_frequency_hz: f64,
+        /// The sample rate used to calculate the Nyquist frequency.
+        sample_rate: u32,
+    },
+    /// A modulated filter's Q must be finite and greater than zero.
+    InvalidModulatedFilterQ(f64),
     /// Reverb room size must be finite and between zero and one.
     InvalidRoomSize(f64),
     /// Reverb decay time must be finite and greater than zero.
@@ -112,6 +123,19 @@ impl Display for EffectError {
                 formatter,
                 "invalid phaser stage count {stages}; it must be between 1 and {}",
                 super::phaser::MAX_PHASER_STAGES
+            ),
+            Self::InvalidModulatedFilterFrequencyRange {
+                minimum_frequency_hz,
+                maximum_frequency_hz,
+                sample_rate,
+            } => write!(
+                formatter,
+                "invalid modulated-filter frequency range {minimum_frequency_hz}..={maximum_frequency_hz} Hz; frequencies must be finite, greater than zero, ordered from minimum to maximum, and below {} Hz",
+                f64::from(*sample_rate) / 2.0
+            ),
+            Self::InvalidModulatedFilterQ(q) => write!(
+                formatter,
+                "invalid modulated-filter Q {q}; it must be finite and greater than zero"
             ),
             Self::InvalidRoomSize(room_size) => write!(
                 formatter,
