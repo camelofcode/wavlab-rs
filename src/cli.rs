@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 
-use crate::{DEFAULT_DELAY_CUTOFF_HZ, DEFAULT_PHASER_STAGES, LfoWaveform};
+use crate::{DEFAULT_DELAY_CUTOFF_HZ, DEFAULT_PHASER_STAGES, LfoWaveform, ModulatedFilterType};
 
 /// LFO waveform accepted by modulation-effect CLI commands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
@@ -24,6 +24,24 @@ impl From<LfoWaveformArg> for LfoWaveform {
             LfoWaveformArg::Sine => Self::Sine,
             LfoWaveformArg::Triangle => Self::Triangle,
             LfoWaveformArg::Square => Self::Square,
+        }
+    }
+}
+
+/// Filter response accepted by the modulated-filter CLI command.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum ModulatedFilterTypeArg {
+    /// Pass frequencies below the moving cutoff.
+    LowPass,
+    /// Pass frequencies above the moving cutoff.
+    HighPass,
+}
+
+impl From<ModulatedFilterTypeArg> for ModulatedFilterType {
+    fn from(filter_type: ModulatedFilterTypeArg) -> Self {
+        match filter_type {
+            ModulatedFilterTypeArg::LowPass => Self::LowPass,
+            ModulatedFilterTypeArg::HighPass => Self::HighPass,
         }
     }
 }
@@ -245,6 +263,36 @@ pub struct LfoEffectArgs {
     /// LFO waveform.
     #[arg(value_enum)]
     pub waveform: LfoWaveformArg,
+
+    /// Destination WAV file; defaults to overwriting the input file.
+    pub output: Option<PathBuf>,
+}
+
+/// Arguments for an LFO-modulated low-pass or high-pass filter.
+#[derive(Debug, Args)]
+pub struct ModulatedFilterArgs {
+    /// WAV file to process.
+    pub input: PathBuf,
+
+    /// Lowest cutoff reached by the sweep, in Hz.
+    pub minimum_frequency_hz: f64,
+
+    /// Highest cutoff reached by the sweep, in Hz.
+    pub maximum_frequency_hz: f64,
+
+    /// LFO frequency in Hz.
+    pub frequency_hz: f64,
+
+    /// Low-pass or high-pass filter response.
+    #[arg(value_enum)]
+    pub filter_type: ModulatedFilterTypeArg,
+
+    /// LFO waveform.
+    #[arg(value_enum)]
+    pub waveform: LfoWaveformArg,
+
+    /// Filter Q controlling resonance around the moving cutoff.
+    pub q: f64,
 
     /// Destination WAV file; defaults to overwriting the input file.
     pub output: Option<PathBuf>,
@@ -615,6 +663,9 @@ pub enum Command {
 
     /// Apply stereo phasing with independent left and right LFO settings.
     PhaserStereo(StereoPhaserArgs),
+
+    /// Apply an LFO-modulated low-pass or high-pass filter.
+    ModulatedFilter(ModulatedFilterArgs),
 
     /// Apply a classic Schroeder algorithmic reverb.
     Reverb {

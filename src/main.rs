@@ -3,14 +3,14 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use wavlab::cli::{
-    Cli, Command, LfoEffectArgs, MonoChorusArgs, MonoDelayArgs, MonoFlangerArgs, MonoPhaserArgs,
-    MonoVibratoArgs, StereoChorusArgs, StereoDelayArgs, StereoFlangerArgs, StereoPhaserArgs,
-    StereoVibratoArgs,
+    Cli, Command, LfoEffectArgs, ModulatedFilterArgs, MonoChorusArgs, MonoDelayArgs,
+    MonoFlangerArgs, MonoPhaserArgs, MonoVibratoArgs, StereoChorusArgs, StereoDelayArgs,
+    StereoFlangerArgs, StereoPhaserArgs, StereoVibratoArgs,
 };
 use wavlab::{
     AutoPanSettings, ChorusChannelSettings, DelayChannelSettings, EffectError,
-    FlangerChannelSettings, GeneratorError, PhaserChannelSettings, TremoloSettings,
-    VibratoChannelSettings, WavError, WavFile,
+    FlangerChannelSettings, GeneratorError, ModulatedFilterSettings, PhaserChannelSettings,
+    TremoloSettings, VibratoChannelSettings, WavError, WavFile,
 };
 
 type CliResult<T> = Result<T, Box<dyn std::error::Error>>;
@@ -446,6 +446,28 @@ fn run(cli: Cli) -> CliResult<()> {
                 )
             })?;
         }
+        Command::ModulatedFilter(filter) => {
+            let ModulatedFilterArgs {
+                input,
+                minimum_frequency_hz,
+                maximum_frequency_hz,
+                frequency_hz,
+                filter_type,
+                waveform,
+                q,
+                output,
+            } = filter;
+            process_effect_file(input, output, |wav_file| {
+                wav_file.modulated_filter(ModulatedFilterSettings::new(
+                    minimum_frequency_hz,
+                    maximum_frequency_hz,
+                    frequency_hz,
+                    filter_type.into(),
+                    waveform.into(),
+                    q,
+                ))
+            })?;
+        }
         Command::Reverb {
             input,
             room_size,
@@ -698,17 +720,18 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use clap::{CommandFactory, Parser};
-    use wavlab::cli::LfoWaveformArg;
+    use wavlab::cli::{LfoWaveformArg, ModulatedFilterTypeArg};
     use wavlab::{
         AutoPanSettings, ChorusChannelSettings, DelayChannelSettings, EffectError,
-        FlangerChannelSettings, LfoWaveform, PhaserChannelSettings, TremoloSettings,
-        VibratoChannelSettings, WavError, WavFile, constants::MINUS_THREE_DB,
+        FlangerChannelSettings, LfoWaveform, ModulatedFilterSettings, ModulatedFilterType,
+        PhaserChannelSettings, TremoloSettings, VibratoChannelSettings, WavError, WavFile,
+        constants::MINUS_THREE_DB,
     };
 
     use super::{
-        Cli, Command, LfoEffectArgs, MonoChorusArgs, MonoDelayArgs, MonoFlangerArgs,
-        MonoPhaserArgs, MonoVibratoArgs, StereoChorusArgs, StereoDelayArgs, StereoFlangerArgs,
-        StereoPhaserArgs, StereoVibratoArgs, run,
+        Cli, Command, LfoEffectArgs, ModulatedFilterArgs, MonoChorusArgs, MonoDelayArgs,
+        MonoFlangerArgs, MonoPhaserArgs, MonoVibratoArgs, StereoChorusArgs, StereoDelayArgs,
+        StereoFlangerArgs, StereoPhaserArgs, StereoVibratoArgs, run,
     };
 
     static NEXT_TEST_FILE: AtomicU64 = AtomicU64::new(0);
@@ -1542,6 +1565,37 @@ mod tests {
     }
 
     #[test]
+    fn parses_modulated_filter_command() {
+        let filter = Cli::try_parse_from([
+            "wavlab",
+            "modulated-filter",
+            "in.wav",
+            "200",
+            "2000",
+            "1.5",
+            "low-pass",
+            "triangle",
+            "0.8",
+            "out.wav",
+        ])
+        .expect("valid modulated filter");
+
+        assert!(matches!(
+            filter.command,
+            Command::ModulatedFilter(ModulatedFilterArgs {
+                input,
+                minimum_frequency_hz: 200.0,
+                maximum_frequency_hz: 2_000.0,
+                frequency_hz: 1.5,
+                filter_type: ModulatedFilterTypeArg::LowPass,
+                waveform: LfoWaveformArg::Triangle,
+                q: 0.8,
+                output: Some(output),
+            }) if input == Path::new("in.wav") && output == Path::new("out.wav")
+        ));
+    }
+
+    #[test]
     fn parses_reverb_command() {
         let reverb = Cli::try_parse_from([
             "wavlab",
@@ -2019,6 +2073,39 @@ mod tests {
                     3,
                     0.5,
                 )
+            },
+        );
+    }
+
+    #[test]
+    fn modulated_filter_command_writes_the_expected_output() {
+        let mut files = TestFiles::new();
+        let input = files.path("modulated-filter-input");
+        let output = files.path("modulated-filter-output");
+        save_mono_file(&input, vec![0.5; 1_500]);
+
+        assert_effect_command_matches(
+            &input,
+            &output,
+            Command::ModulatedFilter(ModulatedFilterArgs {
+                input: input.clone(),
+                minimum_frequency_hz: 200.0,
+                maximum_frequency_hz: 2_000.0,
+                frequency_hz: 1.5,
+                filter_type: ModulatedFilterTypeArg::HighPass,
+                waveform: LfoWaveformArg::Sine,
+                q: 0.8,
+                output: Some(output.clone()),
+            }),
+            |wav_file| {
+                wav_file.modulated_filter(ModulatedFilterSettings::new(
+                    200.0,
+                    2_000.0,
+                    1.5,
+                    ModulatedFilterType::HighPass,
+                    LfoWaveform::Sine,
+                    0.8,
+                ))
             },
         );
     }

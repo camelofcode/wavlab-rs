@@ -7,6 +7,7 @@ mod delay;
 mod digital_delay;
 mod error;
 mod flanger;
+mod modulated_filter;
 mod phaser;
 mod reverb;
 mod tape_delay;
@@ -24,6 +25,7 @@ pub use flanger::{
     FlangerChannelSettings, MAX_FLANGER_DELAY_MILLISECONDS, MAX_FLANGER_FEEDBACK,
     MAX_FLANGER_FREQUENCY_HZ, MIN_FLANGER_FREQUENCY_HZ,
 };
+pub use modulated_filter::{ModulatedFilterSettings, ModulatedFilterType};
 pub use phaser::{
     DEFAULT_PHASER_STAGES, MAX_PHASER_STAGES, MAX_PHASER_SWEEP_OCTAVES, PhaserChannelSettings,
 };

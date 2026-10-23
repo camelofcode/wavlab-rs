@@ -41,7 +41,8 @@ pub use fx::{
     DEFAULT_DELAY_CUTOFF_HZ, DEFAULT_PHASER_STAGES, DelayChannelSettings, EffectError,
     FlangerChannelSettings, MAX_CHORUS_DEPTH_MILLISECONDS, MAX_FLANGER_DELAY_MILLISECONDS,
     MAX_FLANGER_FEEDBACK, MAX_FLANGER_FREQUENCY_HZ, MAX_PHASER_STAGES, MAX_PHASER_SWEEP_OCTAVES,
-    MIN_FLANGER_FREQUENCY_HZ, PhaserChannelSettings, TremoloSettings, VibratoChannelSettings,
+    MIN_FLANGER_FREQUENCY_HZ, ModulatedFilterSettings, ModulatedFilterType, PhaserChannelSettings,
+    TremoloSettings, VibratoChannelSettings,
 };
 pub use generators::GeneratorError;
 pub use tools::{Delay, DelayError, Lfo, LfoWaveform, ProcessingError};
