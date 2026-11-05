@@ -1,5 +1,7 @@
 # wavlab
 
+[![Rust build and test](https://github.com/camelofcode/wavlab-rs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/camelofcode/wavlab-rs/actions/workflows/ci.yml)
+
 `wavlab` is a Rust library, command-line audio processor, and learning resource
 for fundamental digital signal processing algorithms. It provides practical,
 readable implementations of waveform and noise generation, filters, delays,
