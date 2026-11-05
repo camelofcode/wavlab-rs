@@ -970,6 +970,7 @@ mod tests {
 
     #[test]
     fn checked_in_cli_reference_is_current() {
-        assert_eq!(include_str!("../docs/cli.md"), reference_markdown());
+        let checked_in = include_str!("../docs/cli.md").replace("\r\n", "\n");
+        assert_eq!(checked_in, reference_markdown());
     }
 }
