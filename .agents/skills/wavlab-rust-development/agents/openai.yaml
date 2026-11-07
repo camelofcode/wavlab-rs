@@ -1,0 +1,4 @@
+interface:
+  display_name: "WavLab Rust development"
+  short_description: "Maintain Rust library, CLI, and tests"
+  default_prompt: "Use $wavlab-rust-development to implement this WavLab Rust change consistently."
