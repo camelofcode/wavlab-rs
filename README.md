@@ -12,7 +12,8 @@ file, and hear the result.
 The code favours clear, explicit implementations that can be studied and
 adapted, while still exposing the processing through a reusable library and a
 complete CLI application. Algorithm sources and further reading are collected
-in the [references](#references).
+in the [references](#references), and release-facing changes are recorded in
+the [changelog](CHANGELOG.md).
 
 It supports mono and stereo files containing 8-, 16-, 24-, or 32-bit integer
 PCM. WAV samples can be loaded in full or inspected as metadata only. Broadcast

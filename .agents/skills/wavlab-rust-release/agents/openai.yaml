@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release WavLab Rust"
+  short_description: "Prepare tags and GitHub Releases safely"
+  default_prompt: "Use $wavlab-rust-release to prepare and publish the requested WavLab Rust release."
